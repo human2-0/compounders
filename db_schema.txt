@@ -1,0 +1,50 @@
+mixers:
+  - mixerId:
+    - mixerName: String
+    - assignedProducts: Array (of Map)
+      - productId: String
+      - amountToProduce: Number (in kg)
+    - lastUpdated: Timestamp
+    - shiftStart: Timestamp
+    - shiftEnd: Timestamp
+    - capacity: Number
+
+products:
+  - productId:
+    - productName: String
+    - productFormula: Map 
+        - ingredientPLU: Map
+            -ingredientName: String
+            -percentage: Number
+    - lastUpdated: Timestamp
+
+ingredients:
+  - ingredientId:
+    - ingredientName: String
+    - stock: Number
+    - lastUpdated: Timestamp
+    - usedBy: Map (or SubCollection)
+        - userId: Timestamp
+
+usageLog:
+  - logId:
+    - userId: String
+    - productId: String
+    - mixerId: String
+    - ingredientId: String
+    - usedAmount: Number
+    - timestamp: Timestamp
+
+wasteLog:
+  - logId:
+    - userId: String
+    - productId: String
+    - mixerId: String
+    - ingredientId: String
+    - wastedAmount: Number
+    - timestamp: Timestamp
+
+users:
+  - userId:
+    - userName: String
+    - lastActivity: Timestamp
