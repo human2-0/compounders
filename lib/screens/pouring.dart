@@ -1,32 +1,64 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:compounders/repository/ingredients_repository.dart';
+import 'package:compounders/utils.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
-import '../models/mixers_models.dart';
+import '../models/ingredient_model.dart';
 import 'pouring_progress_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class PouringScreen extends ConsumerStatefulWidget {
   final Ingredient ingredient;
 
-  const PouringScreen({super.key, required this.ingredient});
+   const PouringScreen({super.key, required this.ingredient});
 
   @override
   PouringScreenState createState() => PouringScreenState();
 }
 
 class PouringScreenState extends ConsumerState<PouringScreen> {
-  final TextEditingController _controller = TextEditingController();
+  late TextEditingController _controller;
   double userValue = 0;
-  bool isStockUpdated = false;
+  late bool isPoured;
+
+  double usedAmount = 0;
+
+  double overUsedAmount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    Future(() => ref.read(selectedIngredientProvider.notifier).state =
+        widget.ingredient);
+   _controller = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    _controller.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    bool isPoured = ref.watch(isPouredProvider.notifier).state;
     final double requiredAmount =
         widget.ingredient.percentage * widget.ingredient.amountToProduce;
 
     final ingredientAsyncValue =
         ref.watch(ingredientProvider(widget.ingredient.plu));
+
+    final ingredientRepo = ref.read(ingredientRepositoryProvider);
+
+    void updateUsedAmount(
+        WidgetRef ref, Ingredient ingredient, double newUsedAmount) async {
+      final box = await ref.read(pouredAmountBoxProvider.future);
+      await box.put(ingredient.plu, newUsedAmount);
+
+      final amountStateNotifier =
+          ref.watch(amountStateProvider(ingredient).notifier);
+      amountStateNotifier.updateUsedAmount(newUsedAmount);
+    }
 
     return ingredientAsyncValue.when(
       data: (ingredientSnapshot) {
@@ -44,9 +76,29 @@ class PouringScreenState extends ConsumerState<PouringScreen> {
                 onPressed: () => Navigator.of(context).pop(),
               ),
               title: Center(
-                  child: Text(widget.ingredient.name,
-                      style: const TextStyle(
-                          color: Colors.white))), // Adjust text color here
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      Text(
+                          widget.ingredient.name,
+                          style: const TextStyle(
+                              color: Colors.white)),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade800,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(2.0),
+                          child: Text(
+                              " in use: \n ${ingredientSnapshot.currentBarrel}",
+                              style: const TextStyle(
+                                  color: Colors.white,
+                              fontSize: 10)),
+                        ),
+                      ),
+                    ],
+                  )), // Adjust text color here
             ),
           ),
           body: Padding(
@@ -55,19 +107,34 @@ class PouringScreenState extends ConsumerState<PouringScreen> {
               mainAxisAlignment: MainAxisAlignment.start,
               children: [
                 // Container to display the required amount
-                Container(
-                  padding: const EdgeInsets.all(4.0),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade800,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text('${requiredAmount.toStringAsFixed(3)} kg',
-                      style:
-                          const TextStyle(color: Colors.white, fontSize: 20)),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(4.0),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade800,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text('${requiredAmount.toStringAsFixed(3)} kg',
+                          style:
+                              const TextStyle(color: Colors.white, fontSize: 20)),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.all(4.0),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade800,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text('${formatPrecision(ref.watch(amountStateProvider(widget.ingredient)).usedAmount)} \n added',
+                          style:
+                          const TextStyle(color: Colors.white, fontSize: 10)),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 4),
                 SizedBox(
-                  width: MediaQuery.sizeOf(context).width * 0.60,
+                  width: MediaQuery.sizeOf(context).width * 0.70,
                   height: MediaQuery.sizeOf(context).height *
                       0.15, // for 50% of screen width
                   child: TextField(
@@ -76,7 +143,11 @@ class PouringScreenState extends ConsumerState<PouringScreen> {
                         const TextInputType.numberWithOptions(decimal: true),
                     onSubmitted: (value) {
                       setState(() {
-                        userValue = double.parse(value);
+                        try {
+                          userValue = double.parse(value);
+                        } catch (e) {
+                          print(e);
+                        }
                       });
                     },
                     style: const TextStyle(color: Colors.white),
@@ -110,33 +181,35 @@ class PouringScreenState extends ConsumerState<PouringScreen> {
                             duration: const Duration(milliseconds: 500),
                             child: IconButton(
                               key: ValueKey<bool>(
-                                  isStockUpdated), // This key ensures the widget rebuilds when the value changes
-                              icon: isStockUpdated
+                                  isPoured), // This key ensures the widget rebuilds when the value changes
+                              icon: isPoured
                                   ? const Icon(Icons.oil_barrel_rounded)
                                   : const Icon(Icons.water_drop_outlined),
-                              color: isStockUpdated
-                                  ? Colors.yellow
-                                  : Colors
-                                      .white, // Changing color based on the flag
-                              onPressed: isStockUpdated
-                                  ? () {
-                                      setState(() {
-                                        isStockUpdated = false;
-                                      });
-                                      // Logic for what happens when the barrel icon is pressed
-                                      // For example, show some details about the barrel or navigate to another screen
-                                    }
-                                  : () async {
+                              color: _controller.text.isNotEmpty ? (isPoured ? Colors.yellow : Colors.white) : Colors.grey,
+                              onPressed: isPoured
+                                  ? () async {
                                       try {
-                                        double usedAmount =
-                                            double.parse(_controller.text);
+                                        if (!_controller.text.isNotEmpty) return;
+                                        await ingredientRepo
+                                            .adjustCurrentBarrelWeight(
+                                                ingredientSnapshot,
+                                                userValue,
+                                                widget.ingredient.plu,
+                                                usedAmount,
+                                                requiredAmount);
 
-                                        final ingredientRepo = ref
-                                            .read(ingredientRepositoryProvider);
+                                        double wastedAmount = 0;
+                                        double adjustedNetWeightOfBarrel =
+                                            userValue -
+                                                ingredientSnapshot.tareWeight;
+                                        double difference =
+                                           ( ingredientSnapshot
+                                                .currentBarrel -
+                                            adjustedNetWeightOfBarrel -
+                                                requiredAmount);
+                                        difference = (difference * 1000).roundToDouble() / 1000;
 
-                                        await ingredientRepo.pourIngredient(widget.ingredient.plu,
-                                            usedAmount,
-                                            requiredAmount);
+                                          wastedAmount = difference;
 
                                         IngredientLog log = IngredientLog(
                                           userId: "human2-0",
@@ -146,16 +219,45 @@ class PouringScreenState extends ConsumerState<PouringScreen> {
                                           ingredientName:
                                               widget.ingredient.name,
                                           usedAmount: usedAmount,
-                                          requiredAmount: requiredAmount,
-                                          userValue: userValue,
+                                          wastedAmount: wastedAmount.abs(),
+                                          overUsedAmount: overUsedAmount.abs(),
                                         );
 
                                         await ingredientRepo
                                             .productLogIngredients(log);
 
-                                        // Once the data is updated and logged, change the state of the flag
                                         setState(() {
-                                          isStockUpdated = true;
+                                          ref
+                                              .watch(isPouredProvider.notifier)
+                                              .state = false;
+
+                                        });
+                                        _controller.clear();
+                                        userValue = 0;
+                                      } catch (e) {
+                                        print("error from barrel check $e");
+                                      }
+                                      // Logic for what happens when the barrel icon is pressed
+                                      // For example, show some details about the barrel or navigate to another screen
+                                    }
+                                  : () async {
+                                if (!_controller.text.isNotEmpty) return;
+                                      try {
+                                        // Once the used provides poured amount, update state of necessary properties
+                                        setState(() {
+                                          isPoured = true;
+                                          usedAmount = userValue;
+                                          if ((requiredAmount - usedAmount)
+                                              .isNegative) {
+                                            overUsedAmount =
+                                                requiredAmount - usedAmount;
+                                          }
+                                          ref
+                                              .read(isPouredProvider.notifier)
+                                              .state = true;
+                                          updateUsedAmount(ref,
+                                              widget.ingredient, usedAmount);
+                                          _controller.clear();
                                         });
                                       } catch (e) {
                                         print(e);
@@ -167,18 +269,16 @@ class PouringScreenState extends ConsumerState<PouringScreen> {
                             duration: const Duration(milliseconds: 500),
                             width: MediaQuery.of(context).size.width * 0.25,
                             decoration: BoxDecoration(
-                              color: isStockUpdated
-                                  ? Colors.amber
-                                  : Colors.blueGrey,
+                              color: isPoured ? Colors.amber : Colors.blueGrey,
                               borderRadius: const BorderRadius.only(
                                 bottomLeft: Radius.circular(15),
                                 bottomRight: Radius.circular(15),
                               ),
                             ),
                             child: Center(
-                                child: Text(isStockUpdated ? 'Check' : 'Pour',
-                                    style: const TextStyle(
-                                        color: Colors.white, fontSize: 11))),
+                                child: Text(isPoured ? 'Check' : 'Pour',
+                                    style: TextStyle(
+                                        color: _controller.text.isNotEmpty ? Colors.white : Colors.grey, fontSize: 11))),
                           ),
                         ],
                       ),
@@ -200,7 +300,18 @@ class PouringScreenState extends ConsumerState<PouringScreen> {
                                   const Icon(Icons.add_shopping_cart_outlined),
                               color: Colors.white,
                               onPressed: () {
-                                // your functionality goes here
+                                _showConfirmationDialog(
+                                  context,
+                                  ref,
+                                  ingredientSnapshot,
+                                  widget.ingredient.plu,
+                                  usedAmount,
+                                  overUsedAmount,
+                                  userValue,
+                                  requiredAmount,
+                                  widget.ingredient.productName,
+                                  widget.ingredient.name,
+                                );
                               },
                             ),
                           ),
@@ -258,8 +369,285 @@ class PouringScreenState extends ConsumerState<PouringScreen> {
           ),
         );
       },
-      loading: () => CircularProgressIndicator(),
-      error: (error, _) => Text('Error loading ingredient: $error'),
+      loading: () => const CircularProgressIndicator(),
+      error: (error, _) => Text(
+        'Error loading ingredient: $error',
+        style: const TextStyle(fontSize: 6),
+      ),
     );
   }
+}
+
+void _showConfirmationDialog(
+    BuildContext context,
+    WidgetRef ref,
+    IngredientState ingredientSnapshot,
+    String ingredientPLU,
+    double usedAmount,
+    double overUsedAmount,
+    double userValue,
+    double requiredAmount,
+    String productName,
+    String ingredientName) {
+  final height = MediaQuery.of(context).size.height;
+
+  Navigator.of(context).push(MaterialPageRoute<void>(
+    builder: (BuildContext context) {
+      return Theme(
+        data: ThemeData(
+          brightness: Brightness.dark,
+          primaryColor: Colors.blue,
+          appBarTheme: const AppBarTheme(
+            backgroundColor: Colors.black,
+          ),
+        ),
+        child: Scaffold(
+          appBar: PreferredSize(
+            preferredSize: const Size.fromHeight(30.0),
+            child: AppBar(
+              title: Text(
+                'Confirmation',
+                style: TextStyle(fontSize: 0.04 * height),
+              ),
+              leading: IconButton(
+                icon: const Icon(Icons.close, size: 15),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ),
+          ),
+          body: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  'Do you want to start using a new barrel and save the remaining amount as waste?',
+                  style: TextStyle(fontSize: 0.05 * height),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  child: Text('Proceed',
+                      style: TextStyle(fontSize: 0.03 * height)),
+                  onPressed: () {
+                    // Call your topUpIngredient method here
+                    Navigator.of(context).pop();
+                    _showWeightsInputDialog(
+                        context,
+                        ref,
+                        ingredientSnapshot,
+                        ingredientPLU,
+                        userValue,
+                        usedAmount,
+                        overUsedAmount,
+                        requiredAmount,
+                        productName,
+                        ingredientName);
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    },
+    fullscreenDialog: true,
+  ));
+}
+
+void _showWeightsInputDialog(
+    BuildContext context,
+    WidgetRef ref,
+    IngredientState ingredientSnapshot,
+    String ingredientPLU,
+    double userValue,
+    double usedAmount,
+    double overUsedAmount,
+    double requiredAmount,
+    String productName,
+    String ingredientName) {
+  final height = MediaQuery.of(context).size.height;
+
+  Navigator.of(context).push(MaterialPageRoute<void>(
+    builder: (BuildContext dialogContext) {
+      double? newTareWeight;
+      double? newBarrelWeight;
+
+
+
+      return Theme(
+        data: ThemeData(
+          brightness: Brightness.dark,
+          primaryColor: Colors.blue,
+          scaffoldBackgroundColor: Colors.black,
+          inputDecorationTheme: const InputDecorationTheme(
+            labelStyle: TextStyle(color: Colors.white),
+            hintStyle: TextStyle(color: Colors.white70),
+          ),
+        ),
+        child: Scaffold(
+          body: Padding(
+            padding: const EdgeInsets.all(4.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                TextField(
+                  decoration: const InputDecoration(
+                    labelText: 'New Tare Weight',
+                    labelStyle: TextStyle(color: Colors.white),
+                    hintStyle: TextStyle(color: Colors.white70),
+                    contentPadding:
+                        EdgeInsets.symmetric(vertical: 10.0, horizontal: 20.0),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(20.0)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderSide: BorderSide(color: Colors.white70, width: 1.0),
+                      borderRadius: BorderRadius.all(Radius.circular(20.0)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderSide: BorderSide(color: Colors.white70, width: 2.0),
+                      borderRadius: BorderRadius.all(Radius.circular(20.0)),
+                    ),
+                  ),
+                  style: const TextStyle(color: Colors.white),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  onChanged: (value) {
+                    newTareWeight = double.tryParse(value);
+                  },
+                ),
+                const SizedBox(
+                  height: 8,
+                ),
+                TextField(
+                  decoration: const InputDecoration(
+                    labelText: 'New Barrel Weight',
+                    labelStyle: TextStyle(color: Colors.white),
+                    hintStyle: TextStyle(color: Colors.white70),
+                    contentPadding:
+                        EdgeInsets.symmetric(vertical: 10.0, horizontal: 20.0),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(20.0)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderSide: BorderSide(color: Colors.white70, width: 1.0),
+                      borderRadius: BorderRadius.all(Radius.circular(20.0)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderSide: BorderSide(color: Colors.white70, width: 2.0),
+                      borderRadius: BorderRadius.all(Radius.circular(20.0)),
+                    ),
+                  ),
+                  style: const TextStyle(color: Colors.white),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  onChanged: (value) {
+                    newBarrelWeight = double.tryParse(value);
+                  },
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    ElevatedButton(
+                      child: Text('Submit',
+                          style: TextStyle(fontSize: 0.03 * height)),
+                      onPressed: () async {
+                        if (newTareWeight == null ||
+                            newTareWeight == 0 ||
+                            newBarrelWeight == null ||
+                            newBarrelWeight == 0) {
+                          ScaffoldMessenger.of(dialogContext).showSnackBar(
+                            const SnackBar(
+                                content: Text(
+                              'Please enter valid weights',
+                              style: TextStyle(fontSize: 8),
+                            )),
+                          );
+                          return;
+                        }
+                        double wastedAmount = 0;
+                        double adjustedNetWeightOfBarrel =
+                            userValue - ingredientSnapshot.tareWeight;
+                        double difference = adjustedNetWeightOfBarrel -
+                            ingredientSnapshot.currentBarrel;
+
+                        if (difference < 0) {
+                          difference = (difference * 1000).roundToDouble() / 1000;
+                          wastedAmount = difference;
+                        }
+
+                        if (ref.watch(isPouredProvider)) {
+                          ref.read(ingredientRepositoryProvider).pourIngredient(
+                              ingredientPLU,
+                              usedAmount,
+                              requiredAmount,
+                              difference);
+
+                          IngredientLog log = IngredientLog(
+                            userId: "human2-0",
+                            productName: productName,
+                            ingredientId: ingredientPLU,
+                            ingredientName: ingredientName,
+                            usedAmount: usedAmount,
+                            wastedAmount: wastedAmount.abs(),
+                            overUsedAmount: overUsedAmount,
+                          );
+
+                          await ref
+                              .read(ingredientRepositoryProvider)
+                              .productLogIngredients(log);
+                        }
+
+                        // Logic for updating with newTareWeight and newBarrelWeight
+                        // Call your topUpIngredient function here
+                        await ref
+                            .read(ingredientRepositoryProvider)
+                            .topUpIngredient(
+                              currentBarrelWeight: ingredientSnapshot.currentBarrel,
+                              newTareWeight: newTareWeight ?? 0,
+                              newBarrelWeight: newBarrelWeight ?? 0,
+                              ingredientPLU: ingredientPLU,
+                            );
+
+                        IngredientLog log = IngredientLog(
+                          userId: "human2-0",
+                          productName: productName,
+                          ingredientId: ingredientPLU,
+                          ingredientName: ingredientName,
+                          usedAmount: usedAmount,
+                          wastedAmount: wastedAmount.abs(),
+                          overUsedAmount: overUsedAmount,
+                        );
+
+                        await ref
+                            .read(ingredientRepositoryProvider)
+                            .productLogIngredients(log);
+                        Navigator.of(dialogContext).pop();
+
+                        ref.watch(isPouredProvider.notifier).state = false;
+                        String today = DateFormat('yyyy-MM-dd').format(getCurrentLocalTime());
+                        print(today);
+                      },
+                    ),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red[400], // background color
+                      ),
+                      child: Text('Cancel',
+                          style: TextStyle(fontSize: 0.03 * height)),
+                      onPressed: () {
+                        Navigator.of(dialogContext).pop();
+                      },
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    },
+    fullscreenDialog: true,
+  ));
 }

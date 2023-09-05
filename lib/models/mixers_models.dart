@@ -1,13 +1,28 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:compounders/models/product_model.dart';
 import 'package:hive/hive.dart';
 
+
+part 'mixers_models.g.dart'; // The generated file for Hive adapter, ensure you create this
+
+@HiveType(typeId: 2)
 class Mixer {
+  @HiveField(0)
   final String mixerId;
+
+  @HiveField(1)
   final List<Product> assignedProducts;
-  // assuming you want to capture the additional fields
+
+  @HiveField(2)
   final DateTime lastUpdated;
+
+  @HiveField(3)
   final String shift;
+
+  @HiveField(4)
   final int capacity;
+
+  @HiveField(5)
   final String mixerName;
 
   Mixer({
@@ -31,89 +46,21 @@ class Mixer {
       mixerName: json['mixerName'],
     );
   }
-}
 
-class Product {
-  final String productId;
-  final int amountToProduce;
-
-  Product({required this.productId, required this.amountToProduce});
-
-  factory Product.fromJson(Map<String, dynamic> json) {
-    return Product(
-        productId: json['productId'], amountToProduce: json['amountToProduce']);
-  }
-}
-
-class ProductDetails {
-  final String productName;
-  final Map<String, dynamic> productFormula;
-
-  ProductDetails({
-    required this.productName,
-    required this.productFormula,
-  });
-
-  factory ProductDetails.fromJson(Map<String, dynamic> json) {
-    return ProductDetails(
-      productName: json['productName'],
-      productFormula: json['productFormula'] as Map<String, dynamic>,
-    );
-  }
-}
-
-class Ingredient {
-  final String plu;
-  final String name;
-  final double percentage;
-  final int amountToProduce;
-  final String productName;
-
-  Ingredient({required this.name, required this.percentage, required this.plu, required this.amountToProduce, required this.productName});
-
-  factory Ingredient.fromJson(Map<String, dynamic> json) {
-    return Ingredient(
-      plu: json['plu'],
-      name: json['name'],
-      percentage: (json['percentage'] as num).toDouble(),
-      amountToProduce: json['amountToProduce'] as int,
-      productName: json['productId'],
-    );
-  }
-}
-
-class IngredientLog {
-  final String userId;
-  final String productName;
-  final String ingredientId;
-  final String ingredientName;
-  final double usedAmount;
-  final double wastedAmount;
-  final Timestamp timestamp;
-
-  IngredientLog({
-    required this.userId,
-    required this.productName,
-    required this.ingredientId,
-    required this.ingredientName,
-    required this.usedAmount,
-    required double requiredAmount,
-    required double userValue,
-  })  : wastedAmount = (requiredAmount - userValue < 0)
-      ? double.parse((requiredAmount - userValue).toStringAsFixed(3)).abs()
-      : 0.0,
-        timestamp = Timestamp.now();
-
-  Map<String, dynamic> toMap() {
+  Map<String, dynamic> toJson() {
     return {
-      'userId': userId,
-      'productName': productName,
-      'ingredientId': ingredientId,
-      'ingredientName': ingredientName,
-      'usedAmount': usedAmount,
-      'wastedAmount': wastedAmount,
-      'timestamp': timestamp,
+      'mixerId': mixerId,
+      'assignedProducts': assignedProducts.map((product) => product.toJson()).toList(),
+      'lastUpdated': Timestamp.fromDate(lastUpdated),
+      'shift': shift,
+      'capacity': capacity,
+      'mixerName': mixerName,
     };
   }
 }
+
+
+
+
+
 

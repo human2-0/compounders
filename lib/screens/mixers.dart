@@ -21,11 +21,15 @@ class _MixersScreenState extends ConsumerState<MixersScreen> {
 
   Future<void> fetchInitialData() async {
     // You could fetch all ingredients, or a subset based on app logic
-    QuerySnapshot querySnapshot = await FirebaseFirestore.instance.collection('ingredients').get();
+    QuerySnapshot querySnapshot = await FirebaseFirestore.instance.collection(
+        'ingredients').get();
 
     final box = await Hive.openBox('ingredientBox');
     for (var doc in querySnapshot.docs) {
-      await box.put(doc.id, doc.data());
+      final data = doc.data() as Map<String, dynamic>;
+      // Convert Timestamp to DateTime before saving to Hive
+      data['lastUpdated'] = (data['lastUpdated'] as Timestamp).toDate();
+      await box.put(doc.id, data);
     }
   }
 
@@ -35,6 +39,8 @@ class _MixersScreenState extends ConsumerState<MixersScreen> {
     super.initState();
     fetchInitialData();
   }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -125,12 +131,12 @@ class _MixersScreenState extends ConsumerState<MixersScreen> {
                   );
                 },
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (error, stack) => Center(child: Text('Error: $error')),
+                error: (error, stack) => Center(child: Text('Error: $error',style: const TextStyle(fontSize: 6),)),
               );
             } else {
               // Add your ambient mode UI here.
               // Typically, ambient mode UIs are simplified versions of the main UI.
-              return AmbientScreen();
+              return const AmbientScreen();
             }
           },
         );

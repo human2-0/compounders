@@ -1,3 +1,6 @@
+import 'package:timezone/timezone.dart' as tz;
+import 'package:timezone/timezone.dart';
+
 class CycleDateRange {
   DateTime startDate;
   DateTime endDate;
@@ -20,9 +23,9 @@ CycleDateRange getCurrentCycleDateRange(DateTime today) {
   DateTime lastThursdayNextMonth = getLastThursday(DateTime(today.year, today.month + 1, 1));
 
   if (today.isBefore(lastThursdayThisMonth) || today.isAtSameMomentAs(lastThursdayThisMonth)) {
-    return CycleDateRange(lastThursdayPrevMonth.add(Duration(days: 1)), lastThursdayThisMonth);
+    return CycleDateRange(lastThursdayPrevMonth.add(const Duration(days: 1)), lastThursdayThisMonth);
   } else {
-    return CycleDateRange(lastThursdayThisMonth.add(Duration(days: 1)), lastThursdayNextMonth);
+    return CycleDateRange(lastThursdayThisMonth.add(const Duration(days: 1)), lastThursdayNextMonth);
   }
 }
 
@@ -37,4 +40,17 @@ DateTime getLastThursdayOfMonth(DateTime date) {
     }
   }
   throw Exception('Could not find last Thursday of the month'); // This line should never be reached.
+}
+
+
+
+
+TZDateTime getCurrentLocalTime() {
+  final localLocation = tz.local;
+  final now = tz.TZDateTime.now(localLocation);
+  return now;
+}
+
+double formatPrecision(double value, [int precision = 3]) {
+  return double.parse(value.toStringAsFixed(precision));
 }

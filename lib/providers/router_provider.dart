@@ -42,12 +42,12 @@ class RouterNotifier extends ChangeNotifier {
       [
         GoRoute(
           name: 'login',
-          builder: (context, state) => LoginScreen(),
+          builder: (context, state) => const LoginScreen(),
           path: '/login',
         ),
         GoRoute(
           name: 'mixers',
-          builder: (context, state) => MixersScreen(),
+          builder: (context, state) => const MixersScreen(),
           path: '/',
 
         ),

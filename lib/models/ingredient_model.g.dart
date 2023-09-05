@@ -19,17 +19,23 @@ class IngredientStateAdapter extends TypeAdapter<IngredientState> {
     return IngredientState(
       stock: fields[0] as double,
       currentBarrel: fields[1] as double,
+      tareWeight: fields[2] as double,
+      lastUpdated: fields[3] as DateTime,
     );
   }
 
   @override
   void write(BinaryWriter writer, IngredientState obj) {
     writer
-      ..writeByte(2)
+      ..writeByte(4)
       ..writeByte(0)
       ..write(obj.stock)
       ..writeByte(1)
-      ..write(obj.currentBarrel);
+      ..write(obj.currentBarrel)
+      ..writeByte(2)
+      ..write(obj.tareWeight)
+      ..writeByte(3)
+      ..write(obj.lastUpdated);
   }
 
   @override

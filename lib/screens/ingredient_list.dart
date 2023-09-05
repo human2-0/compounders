@@ -1,9 +1,13 @@
 
+import 'package:compounders/repository/ingredients_repository.dart';
 import 'package:compounders/screens/pouring.dart';
+import 'package:compounders/utils.dart';
 import 'package:flutter/material.dart';
-import '../models/mixers_models.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../models/ingredient_model.dart';
+import '../models/product_model.dart';
 
-class IngredientListScreen extends StatefulWidget {
+class IngredientListScreen extends ConsumerStatefulWidget {
   final ProductDetails product;
   final int amountToProduce;
   final String productName;
@@ -14,16 +18,7 @@ class IngredientListScreen extends StatefulWidget {
   IngredientListScreenState createState() => IngredientListScreenState();
 }
 
-class IngredientListScreenState extends State<IngredientListScreen> {
-  List<bool> _selectedIngredients = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _selectedIngredients = List<bool>.generate(
-        widget.product.productFormula.length, (index) => false);
-  }
-
+class IngredientListScreenState extends ConsumerState<IngredientListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -70,68 +65,72 @@ class IngredientListScreenState extends State<IngredientListScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => PouringScreen(ingredient: currentIngredient),
+                  builder: (context) {
+                   return PouringScreen(ingredient: currentIngredient);
+                  },
                 ),
               );
             },
-            child: Container(
-              margin: const EdgeInsets.symmetric(vertical: 2.0),
-              padding: const EdgeInsets.all(4.0),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade800,
-                borderRadius: BorderRadius.circular(10),
+            child: Consumer(
+    builder: (context, ref, child) {
+      final amountState = ref.watch(amountStateProvider(currentIngredient));
+      print('used Amount: ${amountState.usedAmount}');
+      final isCompleted = formatPrecision(amountState.usedAmount) >= (0.998 * amountState.requiredAmount);
+      return Container(
+        margin: const EdgeInsets.symmetric(vertical: 2.0),
+        padding: const EdgeInsets.all(4.0),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade800,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 25,
+              child: IconButton(
+                iconSize: 20,
+                icon: Icon(
+                  isCompleted
+                      ? Icons.science_rounded
+                      : Icons.science_outlined,
+                  color: isCompleted ? Colors.green : Colors.red,
+                ),
+                onPressed: () {
+                },
               ),
-              child: Row(
-                children: [
-                  SizedBox(
-                    width: 25,
-                    child: IconButton(
-                      iconSize: 20,
-                      icon: Icon(
-                        _selectedIngredients[index]
-                            ? Icons.science_rounded
-                            : Icons.science_outlined,
-                        color: _selectedIngredients[index]
-                            ? Colors.green
-                            : Colors.red,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _selectedIngredients[index] =
-                          !_selectedIngredients[index];
-                        });
-                      },
-                    ),
+            ),
+            const SizedBox(width: 16),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  ingredientName,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Colors.white,
                   ),
-                  const SizedBox(width: 16),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        ingredientName,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Colors.white,
-                        ),
-                      ),
-                      Text(
-                        'Amount: ${ingredientPercentage * widget.amountToProduce} kg',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey,
-                        ),
-                      ),
-                      Text(
-                        'PLU: $plu',
-                        style: const TextStyle(
-                          fontSize: 10,
-                          color: Colors.grey,
-                        ),
-                      ),
-                    ],
+                ),
+                Text(
+                  'Amount: ${ingredientPercentage * widget.amountToProduce} kg',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey,
                   ),
-                ],
-              ),
+                ),
+                Text(
+                  'PLU: $plu',
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: Colors.grey,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      )
+      ;
+    }
             ),
           );
         },
