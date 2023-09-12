@@ -10,23 +10,27 @@ class ProductsRepository {
 
   ProductsRepository(this._firestore, this._productDetailsBox);
 
-  Future<ProductDetails> getProductDetails(String productId) async {
+  Future<ProductDetails> getProductDetails(String mixerId, String productId, String orderId) async {
+    // Form a unique key using mixerId and orderId
+    String uniqueKey = '$mixerId-$productId-$orderId';
+
     // First, try to get the product details from the Hive box
-    var cachedProductDetails = _productDetailsBox.get(productId);
+    var cachedProductDetails = _productDetailsBox.get(uniqueKey);
 
     if (cachedProductDetails != null) {
       return cachedProductDetails;
     } else {
       // If not in the box, fetch from Firestore
+      print("Fetching product with productId: $productId");
       DocumentSnapshot productDocument =
-      await _firestore.collection('products').doc(productId).get();
+      await _firestore.collection('products').doc(productId).get(); // Assuming the document id in Firestore is still the orderId
 
       if (productDocument.exists) {
         ProductDetails productDetails =
         ProductDetails.fromJson(productDocument.data() as Map<String, dynamic>);
 
         // Save to Hive for future use
-        await _productDetailsBox.put(productId, productDetails);
+        await _productDetailsBox.put(uniqueKey, productDetails);
 
         return productDetails;
       } else {
@@ -41,3 +45,4 @@ final productsRepository = Provider<ProductsRepository>((ref) {
   final productDetailsBox = Hive.box<ProductDetails>('productDetailsBox');
   return ProductsRepository(firestore, productDetailsBox);
 });
+

@@ -2,15 +2,19 @@ import 'package:compounders/repository/ingredients_repository.dart';
 import 'package:compounders/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:tuple/tuple.dart';
 
 import '../models/ingredient_model.dart';
 import 'pouring_progress_bar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'use_whole_barrel.dart';
+
 class PouringScreen extends ConsumerStatefulWidget {
   final Ingredient ingredient;
+  final String orderId;
 
-   const PouringScreen({super.key, required this.ingredient});
+   const PouringScreen({super.key, required this.ingredient, required this.orderId});
 
   @override
   PouringScreenState createState() => PouringScreenState();
@@ -44,19 +48,22 @@ class PouringScreenState extends ConsumerState<PouringScreen> {
     bool isPoured = ref.watch(isPouredProvider.notifier).state;
     final double requiredAmount =
         widget.ingredient.percentage * widget.ingredient.amountToProduce;
+    final double addedAmount = formatPrecision(ref.watch(amountStateProvider(Tuple2(widget.orderId,widget.ingredient))).usedAmount);
 
     final ingredientAsyncValue =
         ref.watch(ingredientProvider(widget.ingredient.plu));
 
     final ingredientRepo = ref.read(ingredientRepositoryProvider);
 
-    void updateUsedAmount(
-        WidgetRef ref, Ingredient ingredient, double newUsedAmount) async {
-      final box = await ref.read(pouredAmountBoxProvider.future);
-      await box.put(ingredient.plu, newUsedAmount);
+    void updateUsedAmount(WidgetRef ref, String orderId, Ingredient ingredient, double newUsedAmount) async {
+      final currentDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      final boxKey = "$orderId-${ingredient.plu}";
+      final updatedUsedAmount = addedAmount + newUsedAmount;
 
-      final amountStateNotifier =
-          ref.watch(amountStateProvider(ingredient).notifier);
+      final box = await ref.read(pouredAmountBoxProvider.future);
+      await box.put(boxKey, {'date': currentDate, 'usedAmount': formatPrecision(updatedUsedAmount)});
+
+      final amountStateNotifier = ref.read(amountStateProvider(Tuple2(orderId, ingredient)).notifier);
       amountStateNotifier.updateUsedAmount(newUsedAmount);
     }
 
@@ -116,19 +123,9 @@ class PouringScreenState extends ConsumerState<PouringScreen> {
                         color: Colors.grey.shade800,
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Text('${requiredAmount.toStringAsFixed(3)} kg',
+                      child: Text('${formatPrecision(requiredAmount - addedAmount)} left to add',
                           style:
                               const TextStyle(color: Colors.white, fontSize: 20)),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.all(4.0),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade800,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text('${formatPrecision(ref.watch(amountStateProvider(widget.ingredient)).usedAmount)} \n added',
-                          style:
-                          const TextStyle(color: Colors.white, fontSize: 10)),
                     ),
                   ],
                 ),
@@ -146,7 +143,6 @@ class PouringScreenState extends ConsumerState<PouringScreen> {
                         try {
                           userValue = double.parse(value);
                         } catch (e) {
-                          print(e);
                         }
                       });
                     },
@@ -179,90 +175,98 @@ class PouringScreenState extends ConsumerState<PouringScreen> {
                         children: [
                           AnimatedSwitcher(
                             duration: const Duration(milliseconds: 500),
-                            child: IconButton(
-                              key: ValueKey<bool>(
-                                  isPoured), // This key ensures the widget rebuilds when the value changes
-                              icon: isPoured
-                                  ? const Icon(Icons.oil_barrel_rounded)
-                                  : const Icon(Icons.water_drop_outlined),
-                              color: _controller.text.isNotEmpty ? (isPoured ? Colors.yellow : Colors.white) : Colors.grey,
-                              onPressed: isPoured
-                                  ? () async {
-                                      try {
-                                        if (!_controller.text.isNotEmpty) return;
-                                        await ingredientRepo
-                                            .adjustCurrentBarrelWeight(
-                                                ingredientSnapshot,
-                                                userValue,
-                                                widget.ingredient.plu,
-                                                usedAmount,
-                                                requiredAmount);
+                            child: GestureDetector(
+                              onLongPress: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (context) => UseWholeBarrel(ingredient: widget.ingredient, requiredAmount: (requiredAmount - addedAmount), stock: ingredientSnapshot.stock, orderId: widget.orderId,
+                                  )),
+                                );
+                              },
+                              child: IconButton(
+                                key: ValueKey<bool>(
+                                    isPoured), // This key ensures the widget rebuilds when the value changes
+                                icon: isPoured
+                                    ? const Icon(Icons.oil_barrel_rounded)
+                                    : const Icon(Icons.water_drop_outlined),
+                                color: _controller.text.isNotEmpty ? (isPoured ? Colors.yellow : Colors.white) : Colors.grey,
 
-                                        double wastedAmount = 0;
-                                        double adjustedNetWeightOfBarrel =
-                                            userValue -
-                                                ingredientSnapshot.tareWeight;
-                                        double difference =
-                                           ( ingredientSnapshot
-                                                .currentBarrel -
-                                            adjustedNetWeightOfBarrel -
-                                                requiredAmount);
-                                        difference = (difference * 1000).roundToDouble() / 1000;
+                                onPressed: isPoured
+                                    ? () async {
+                                        try {
+                                          if (!_controller.text.isNotEmpty) return;
+                                          await ingredientRepo
+                                              .adjustCurrentBarrelWeight(
+                                                  ingredientSnapshot,
+                                                  userValue,
+                                                  widget.ingredient.plu,
+                                                  usedAmount,
+                                                  requiredAmount);
 
-                                          wastedAmount = difference;
+                                          double wastedAmount = 0;
+                                          double adjustedNetWeightOfBarrel =
+                                              userValue -
+                                                  ingredientSnapshot.tareWeight;
+                                          double difference =
+                                             ( ingredientSnapshot
+                                                  .currentBarrel -
+                                              adjustedNetWeightOfBarrel -
+                                                  requiredAmount);
+                                          difference = (difference * 1000).roundToDouble() / 1000;
 
-                                        IngredientLog log = IngredientLog(
-                                          userId: "human2-0",
-                                          productName:
-                                              widget.ingredient.productName,
-                                          ingredientId: widget.ingredient.plu,
-                                          ingredientName:
-                                              widget.ingredient.name,
-                                          usedAmount: usedAmount,
-                                          wastedAmount: wastedAmount.abs(),
-                                          overUsedAmount: overUsedAmount.abs(),
-                                        );
+                                            wastedAmount = difference;
 
-                                        await ingredientRepo
-                                            .productLogIngredients(log);
+                                          IngredientLog log = IngredientLog(
+                                            userId: "human2-0",
+                                            productName:
+                                                widget.ingredient.productName,
+                                            ingredientId: widget.ingredient.plu,
+                                            ingredientName:
+                                                widget.ingredient.name,
+                                            usedAmount: usedAmount,
+                                            wastedAmount: wastedAmount.abs(),
+                                            overUsedAmount: overUsedAmount.abs(),
+                                          );
 
-                                        setState(() {
-                                          ref
-                                              .watch(isPouredProvider.notifier)
-                                              .state = false;
+                                          await ingredientRepo
+                                              .productLogIngredients(log);
 
-                                        });
-                                        _controller.clear();
-                                        userValue = 0;
-                                      } catch (e) {
-                                        print("error from barrel check $e");
-                                      }
-                                      // Logic for what happens when the barrel icon is pressed
-                                      // For example, show some details about the barrel or navigate to another screen
-                                    }
-                                  : () async {
-                                if (!_controller.text.isNotEmpty) return;
-                                      try {
-                                        // Once the used provides poured amount, update state of necessary properties
-                                        setState(() {
-                                          isPoured = true;
-                                          usedAmount = userValue;
-                                          if ((requiredAmount - usedAmount)
-                                              .isNegative) {
-                                            overUsedAmount =
-                                                requiredAmount - usedAmount;
-                                          }
-                                          ref
-                                              .read(isPouredProvider.notifier)
-                                              .state = true;
-                                          updateUsedAmount(ref,
-                                              widget.ingredient, usedAmount);
+                                          setState(() {
+                                            ref
+                                                .watch(isPouredProvider.notifier)
+                                                .state = false;
+
+                                          });
                                           _controller.clear();
-                                        });
-                                      } catch (e) {
-                                        print(e);
+                                          userValue = 0;
+                                        } catch (e) {
+                                        }
+                                        // Logic for what happens when the barrel icon is pressed
+                                        // For example, show some details about the barrel or navigate to another screen
                                       }
-                                    },
+                                    : () async {
+                                  if (!_controller.text.isNotEmpty) return;
+                                        try {
+                                          // Once the used provides poured amount, update state of necessary properties
+                                          setState(() {
+                                            isPoured = true;
+                                            usedAmount = userValue;
+                                            if ((requiredAmount - usedAmount)
+                                                .isNegative) {
+                                              overUsedAmount =
+                                                  requiredAmount - usedAmount;
+                                            }
+                                            ref
+                                                .read(isPouredProvider.notifier)
+                                                .state = true;
+                                            updateUsedAmount(ref,
+                                                widget.orderId, widget.ingredient, usedAmount);
+                                            _controller.clear();
+                                          });
+                                        } catch (e) {
+                                        }
+                                      },
+                              ),
                             ),
                           ),
                           AnimatedContainer(
@@ -626,8 +630,6 @@ void _showWeightsInputDialog(
                         Navigator.of(dialogContext).pop();
 
                         ref.watch(isPouredProvider.notifier).state = false;
-                        String today = DateFormat('yyyy-MM-dd').format(getCurrentLocalTime());
-                        print(today);
                       },
                     ),
                     ElevatedButton(

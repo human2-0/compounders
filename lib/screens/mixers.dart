@@ -91,7 +91,7 @@ class _MixersScreenState extends ConsumerState<MixersScreen> {
                               children: [
                                 Center(
                                   child: Text(
-                                    mixer.mixerId,
+                                     mixer.mixerName,
                                     style: const TextStyle(
                                       color: Colors.white,
                                       fontSize: 20,

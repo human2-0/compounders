@@ -3,6 +3,7 @@ import 'package:compounders/providers/router_provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart' as path_provider;
 import 'firebase_options.dart';
 import 'models/ingredient_model.dart';
@@ -33,6 +34,7 @@ Future<void> initializeApp() async {
   await Hive.openBox<ProductDetails>('productDetailsBox');
   await Hive.openBox('metadata');
   await Hive.openBox('pouring_data');
+  cleanupOldHiveData();
 }
 
 void main() async {
@@ -50,5 +52,25 @@ class MyApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       routerConfig: router,
     );
+  }
+}
+
+Future<void> cleanupOldHiveData() async {
+  final currentDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
+  final box = await Hive.openBox('pouredAmountBox');
+
+  final keysToRemove = [];
+
+  // iterate over all keys in the box
+  for (var key in box.keys) {
+    final data = box.get(key);
+    if (data['date'] != currentDate) {
+      keysToRemove.add(key);
+    }
+  }
+
+  // Remove outdated records
+  for (var key in keysToRemove) {
+    box.delete(key);
   }
 }

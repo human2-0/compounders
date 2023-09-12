@@ -3,10 +3,13 @@ import 'package:compounders/repository/products_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../models/ingredient_model.dart';
+import '../models/mixers_models.dart';
+import 'ingredients_done_check.dart';
 import 'ingredient_list.dart';
 
 class ProductListScreen extends ConsumerStatefulWidget {
-  final List<Product> products;
+  final Map<String, AssignedProduct> products;
   final String? mixerName;
 
   const ProductListScreen({super.key, required this.products, this.mixerName});
@@ -16,18 +19,15 @@ class ProductListScreen extends ConsumerStatefulWidget {
 }
 
 class _ProductListScreenState extends ConsumerState<ProductListScreen> {
-  List<bool> _selectedProducts = [];
-
   @override
   void initState() {
     super.initState();
-    _selectedProducts =
-        List<bool>.generate(widget.products.length, (index) => false);
   }
 
   @override
   Widget build(BuildContext context) {
-    final productsDetails = ref.watch(productsRepository);
+    final productsDetails = ref.read(productsRepository);
+
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: PreferredSize(
@@ -47,21 +47,51 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
       body: ListView.builder(
         itemCount: widget.products.length,
         itemBuilder: (BuildContext context, int index) {
+          String orderId = widget.products.keys.elementAt(index);
+          AssignedProduct assignedProduct = widget.products[orderId]!;
+
           return FutureBuilder<ProductDetails>(
-            future: productsDetails
-                .getProductDetails(widget.products[index].productId),
+            future: productsDetails.getProductDetails(
+                widget.mixerName!, assignedProduct.productId, orderId),
             builder:
                 (BuildContext context, AsyncSnapshot<ProductDetails> snapshot) {
               if (snapshot.connectionState == ConnectionState.done) {
+                if (snapshot.hasError) {
+                  // Log or display the error
+                  return const Text("Error occurred!");
+                }
+
                 if (snapshot.hasData) {
-                  String productName = snapshot.data!.productName;
+                  final productData =
+                      snapshot.data!; // Avoid using snapshot.data! repeatedly
+
+                  List<Ingredient> ingredientsList =
+                      productData.productFormula.entries.map((entry) {
+                    var plu = entry.key;
+                    var ingredientData = entry.value;
+
+                    return Ingredient(
+                      plu: plu, // defaults to an empty string if null
+                      name: ingredientData[
+                          'ingredientName'], // defaults to an empty string if null
+                      percentage:
+                          ingredientData['percentage'], // default to 0 if null
+                      amountToProduce: assignedProduct.amountToProduce,
+                      productName: productData.productName,
+                    );
+                  }).toList();
+
 
                   return GestureDetector(
                     onTap: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => IngredientListScreen(product: snapshot.data!, amountToProduce: widget.products[index].amountToProduce, productName: productName),
+                          builder: (context) => IngredientListScreen(
+                              orderId: orderId,
+                              assignedProduct: assignedProduct,
+                              productName: productData.productName,
+                              ingredientsList: ingredientsList),
                         ),
                       );
                     },
@@ -74,40 +104,21 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                       ),
                       child: Row(
                         children: [
-                          SizedBox(
-                            width: 25,
-                            child: IconButton(
-                              iconSize: 20,
-                              icon: Icon(
-                                _selectedProducts[index]
-                                    ? Icons.flag_circle_rounded
-                                    : Icons.flag_circle_outlined,
-                                color: _selectedProducts[index]
-                                    ? Colors.green
-                                    : Colors.red,
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  _selectedProducts[index] =
-                                      !_selectedProducts[index];
-                                });
-                              },
-                            ),
-                          ),
+                         IngredientsDoneCheck(orderId: orderId, ingredientsList: ingredientsList),
                           const SizedBox(width: 16),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                productName, // Using fetched productName
+                                productData
+                                    .productName, // Using fetched productName
                                 style: const TextStyle(
                                     fontSize: 12, color: Colors.white),
                               ),
                               Text(
-                                'to make: ${widget.products[index].amountToProduce
-                                    .toString()} kg',
-                                style:
-                                    const TextStyle(fontSize: 10, color: Colors.grey),
+                                'to make: ${assignedProduct.amountToProduce.toString()} kg',
+                                style: const TextStyle(
+                                    fontSize: 10, color: Colors.grey),
                               ),
                             ],
                           ),

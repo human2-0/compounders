@@ -11,7 +11,7 @@ class Mixer {
   final String mixerId;
 
   @HiveField(1)
-  final List<Product> assignedProducts;
+  final Map<String, AssignedProduct> assignedProducts;  // Using a Map now
 
   @HiveField(2)
   final DateTime lastUpdated;
@@ -35,11 +35,13 @@ class Mixer {
   });
 
   factory Mixer.fromJson(Map<String, dynamic> json) {
+    Map<String, AssignedProduct> productsMap = {};
+    (json['assignedProducts'] as Map<String, dynamic>).forEach((key, value) {
+      productsMap[key] = AssignedProduct.fromJson(value as Map<String, dynamic>);
+    });
     return Mixer(
-      mixerId: json['mixerName'] ?? "Unknown", // use mixerName as the mixerId
-      assignedProducts: [
-        Product.fromJson(json['assignedProducts'] as Map<String, dynamic>)
-      ], // Wrapping in a list since assignedProducts seems to be a Map
+      mixerId: json['mixerId'] ?? "Unknown",
+      assignedProducts: productsMap,
       lastUpdated: (json['lastUpdated'] as Timestamp).toDate(),
       shift: json['shift'],
       capacity: json['capacity'],
@@ -48,9 +50,13 @@ class Mixer {
   }
 
   Map<String, dynamic> toJson() {
+    Map<String, dynamic> productsMap = {};
+    assignedProducts.forEach((key, value) {
+      productsMap[key] = value.toJson();
+    });
     return {
       'mixerId': mixerId,
-      'assignedProducts': assignedProducts.map((product) => product.toJson()).toList(),
+      'assignedProducts': productsMap,
       'lastUpdated': Timestamp.fromDate(lastUpdated),
       'shift': shift,
       'capacity': capacity,
@@ -59,7 +65,26 @@ class Mixer {
   }
 }
 
+class AssignedProduct {
+  final String productId;
+  final int amountToProduce;
 
+  AssignedProduct({required this.productId, required this.amountToProduce});
+
+  factory AssignedProduct.fromJson(Map<String, dynamic> json) {
+    return AssignedProduct(
+      productId: json['productId'],
+      amountToProduce: json['amountToProduce'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'productId': productId,
+      'amountToProduce': amountToProduce,
+    };
+  }
+}
 
 
 

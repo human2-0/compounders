@@ -1,7 +1,8 @@
+import 'dart:math';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive/hive.dart';
-import 'package:rxdart/rxdart.dart';
 
 import '../models/mixers_models.dart';
 import '../models/product_model.dart';
@@ -21,11 +22,13 @@ class MixersRepository {
   }
 
 
-  Future<void> assignProductToMixer(String mixerId, String productId,
-      int amountToProduce) async {
+  Future<void> assignProductToMixer(String mixerId, String productId, int amountToProduce) async {
     try {
       // Get reference to the mixer document
       DocumentReference mixerRef = _firestore.collection('mixers').doc(mixerId);
+
+      // Generate a unique orderId
+      String orderId = DateTime.now().millisecondsSinceEpoch.toString() + Random().nextInt(9999).toString();
 
       // Build the product map
       Map<String, dynamic> productMap = {
@@ -35,17 +38,16 @@ class MixersRepository {
 
       // Update Firestore
       await mixerRef.update({
-        'assignedProducts': FieldValue.arrayUnion([productMap]),
+        'assignedProducts.$orderId': productMap,  // Using dot notation to set nested fields
         'lastUpdated': FieldValue.serverTimestamp(),
       });
 
       // Update Hive
       final mixer = _mixerBox.get(mixerId);
       if (mixer != null) {
-        final newProduct = Product(
-            productId: productId, amountToProduce: amountToProduce);
-        final updatedProducts = List<Product>.from(mixer.assignedProducts)
-          ..add(newProduct);
+        final newProduct = AssignedProduct(productId: productId, amountToProduce: amountToProduce);
+        final updatedProducts = Map<String, AssignedProduct>.from(mixer.assignedProducts)
+          ..[orderId] = newProduct;
         final updatedMixer = Mixer(
             mixerId: mixer.mixerId,
             assignedProducts: updatedProducts,
@@ -57,10 +59,11 @@ class MixersRepository {
         _mixerBox.put(mixerId, updatedMixer);
       }
     } catch (e) {
-      print(e.toString());
       rethrow;
     }
   }
+
+
 
   Future<Iterable<Mixer?>> getAllMixersWithAssignedProducts() async {
     if (!_mixerBox.isOpen) {
@@ -102,9 +105,7 @@ class MixersRepository {
         final mixer = Mixer.fromJson(dataMap);
         try {
           final mixer = Mixer.fromJson(doc.data());
-          print("Parsed mixer: $mixer");
         } catch (e) {
-          print("Error parsing mixer: $e");
         }
         return mixer;
       }).toList();
