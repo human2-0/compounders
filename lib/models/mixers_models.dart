@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:compounders/models/product_model.dart';
 import 'package:hive/hive.dart';
 
 
@@ -19,8 +18,6 @@ class Mixer {
   @HiveField(3)
   final String shift;
 
-  @HiveField(4)
-  final int capacity;
 
   @HiveField(5)
   final String mixerName;
@@ -30,24 +27,30 @@ class Mixer {
     required this.assignedProducts,
     required this.lastUpdated,
     required this.shift,
-    required this.capacity,
     required this.mixerName,
   });
 
   factory Mixer.fromJson(Map<String, dynamic> json) {
     Map<String, AssignedProduct> productsMap = {};
-    (json['assignedProducts'] as Map<String, dynamic>).forEach((key, value) {
-      productsMap[key] = AssignedProduct.fromJson(value as Map<String, dynamic>);
-    });
+
+    // Safely cast and handle potential null or missing values
+    Map<String, dynamic>? assignedProductsMap = json['assignedProducts'] as Map<String, dynamic>?;
+    if (assignedProductsMap != null) {
+      assignedProductsMap.forEach((key, value) {
+        productsMap[key] = AssignedProduct.fromJson(value as Map<String, dynamic>);
+      });
+    }
+
     return Mixer(
       mixerId: json['mixerId'] ?? "Unknown",
       assignedProducts: productsMap,
-      lastUpdated: (json['lastUpdated'] as Timestamp).toDate(),
+      // Safely convert Timestamp to DateTime
+      lastUpdated: (json['lastUpdated'] as Timestamp?)!.toDate(),
       shift: json['shift'],
-      capacity: json['capacity'],
       mixerName: json['mixerName'],
     );
   }
+
 
   Map<String, dynamic> toJson() {
     Map<String, dynamic> productsMap = {};
@@ -59,7 +62,6 @@ class Mixer {
       'assignedProducts': productsMap,
       'lastUpdated': Timestamp.fromDate(lastUpdated),
       'shift': shift,
-      'capacity': capacity,
       'mixerName': mixerName,
     };
   }

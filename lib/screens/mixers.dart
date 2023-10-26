@@ -1,12 +1,12 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:compounders/repository/mixers_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive/hive.dart';
 import 'package:wear/wear.dart';
 import 'package:compounders/screens/ambient.dart';
 
+import '../providers/compounding_provider.dart';
+import 'calendar_selector.dart';
 import 'product_list.dart';
 
 class MixersScreen extends ConsumerStatefulWidget {
@@ -21,8 +21,7 @@ class _MixersScreenState extends ConsumerState<MixersScreen> {
 
   Future<void> fetchInitialData() async {
     // You could fetch all ingredients, or a subset based on app logic
-    QuerySnapshot querySnapshot = await FirebaseFirestore.instance.collection(
-        'ingredients').get();
+    QuerySnapshot querySnapshot = await FirebaseFirestore.instance.collection('ingredients').get();
 
     final box = await Hive.openBox('ingredientBox');
     for (var doc in querySnapshot.docs) {
@@ -33,17 +32,16 @@ class _MixersScreenState extends ConsumerState<MixersScreen> {
     }
   }
 
-
   @override
   void initState() {
     super.initState();
     fetchInitialData();
   }
 
-
-
   @override
   Widget build(BuildContext context) {
+    final dateState = ref.watch(dateProvider);
+
     return WatchShape(
       builder: (BuildContext context, WearShape shape, Widget? child) {
         return AmbientMode(
@@ -57,13 +55,48 @@ class _MixersScreenState extends ConsumerState<MixersScreen> {
                     return const Center(child: Text('No mixers found.'));
                   }
 
-                  return Scrollbar(
-                    child: GridView.builder(
+                  return Scaffold(
+                    backgroundColor: Colors.black,
+                    appBar: PreferredSize(
+                      preferredSize: const Size.fromHeight(30.0),
+                      child: AppBar(
+                          backgroundColor: Colors.black,
+                        leading: Row(
+                          children: [
+                            IconButton(
+                              iconSize: 15,
+                              icon: const Icon(Icons.settings),
+                              onPressed: () {},
+                            ),
+                          ],
+                        ),
+                        actions: [
+                          IconButton(
+                            iconSize: 15,
+                            icon: const Icon(Icons.people_alt_outlined),
+                            onPressed: () {},
+                          ),
+
+                          IconButton(
+                            iconSize: 15,
+                            icon: const Icon(Icons.calendar_month_rounded),
+                            onPressed: () {
+                              // Navigate to the CalendarSelector
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const CalendarSelector(),
+                                ),
+                              );
+                            },
+                          ),]
+                      ),
+                    ),
+                    body: GridView.builder(
                       itemCount: mixers.length,
                       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 2,
-                        childAspectRatio: MediaQuery.of(context).size.width /
-                            (MediaQuery.of(context).size.height),
+                        childAspectRatio: MediaQuery.of(context).size.width / (MediaQuery.of(context).size.height),
                       ),
                       itemBuilder: (BuildContext context, int index) {
                         final mixer = mixers[index];
@@ -91,7 +124,7 @@ class _MixersScreenState extends ConsumerState<MixersScreen> {
                               children: [
                                 Center(
                                   child: Text(
-                                     mixer.mixerName,
+                                    mixer.mixerName,
                                     style: const TextStyle(
                                       color: Colors.white,
                                       fontSize: 20,
@@ -131,7 +164,11 @@ class _MixersScreenState extends ConsumerState<MixersScreen> {
                   );
                 },
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (error, stack) => Center(child: Text('Error: $error',style: const TextStyle(fontSize: 6),)),
+                error: (error, stack) => Center(
+                    child: Text(
+                  'Error: $error',
+                  style: const TextStyle(fontSize: 6),
+                )),
               );
             } else {
               // Add your ambient mode UI here.
@@ -144,6 +181,3 @@ class _MixersScreenState extends ConsumerState<MixersScreen> {
     );
   }
 }
-
-
-

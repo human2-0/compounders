@@ -60,6 +60,8 @@ class RouterNotifier extends ChangeNotifier {
 
 
   FutureOr<String?> _redirect(user, userData) async {
+    return null;
+  
     // The logic remains the same.
   //   if (user == null) {
   //     return '/login';

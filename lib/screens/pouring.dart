@@ -627,9 +627,9 @@ void _showWeightsInputDialog(
                         await ref
                             .read(ingredientRepositoryProvider)
                             .productLogIngredients(log);
-                        Navigator.of(dialogContext).pop();
 
                         ref.watch(isPouredProvider.notifier).state = false;
+                        Navigator.of(dialogContext).pop();
                       },
                     ),
                     ElevatedButton(

@@ -1,11 +1,9 @@
 import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive/hive.dart';
 
 import '../models/mixers_models.dart';
-import '../models/product_model.dart';
 
 class MixersRepository {
   final FirebaseFirestore _firestore;
@@ -53,7 +51,6 @@ class MixersRepository {
             assignedProducts: updatedProducts,
             lastUpdated: DateTime.now(),
             shift: mixer.shift,
-            capacity: mixer.capacity,
             mixerName: mixer.mixerName
         );
         _mixerBox.put(mixerId, updatedMixer);
@@ -65,20 +62,20 @@ class MixersRepository {
 
 
 
-  Future<Iterable<Mixer?>> getAllMixersWithAssignedProducts() async {
+  Future<Iterable<Mixer>> getAllMixersWithAssignedProducts(DateTime date) async {
     if (!_mixerBox.isOpen) {
       await Hive.openBox<Mixer>('mixerBox');
     }
 
-    DateTime? lastSynced = _metaBox.get('lastUpdated') as DateTime?;
-    lastSynced ??= DateTime.fromMillisecondsSinceEpoch(0);
+    // Convert DateTime to String in YYYY-MM-DD format
+    String formattedDate = "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
 
-    // Fetch mixers updated after the last sync
     QuerySnapshot mixerSnapshot = await _firestore.collection('mixers')
-        .where('lastUpdated', isGreaterThan: lastSynced)
+        .doc(formattedDate)
+        .collection('orders')
         .get();
 
-    final mixers = mixerSnapshot.docs.map((doc) {
+    List<Mixer?> mixers = mixerSnapshot.docs.map((doc) {
       if (doc.data() != null) {
         final mixer = Mixer.fromJson({
           'mixerId': doc.id,
@@ -86,41 +83,30 @@ class MixersRepository {
         });
         _mixerBox.put(doc.id, mixer); // Cache in Hive
         return mixer;
-      } else {
-        return null;
       }
+      return null; // This will be filtered out later
     }).toList();
 
-    // Save the latest sync timestamp to Hive
-    _metaBox.put('lastUpdated', DateTime.now());
-
-    return mixers.where((mixer) => mixer != null).cast<
-        Mixer>(); // Filter out null values
+    // Filter out potential null values and return as Iterable<Mixer>
+    return mixers.where((mixer) => mixer != null).cast<Mixer>();
   }
 
-  Stream<List<Mixer>> streamMixers() {
-    return _firestore.collection('mixers').snapshots().map((snapshot) {
-      return snapshot.docs.map((doc) {
+
+
+  Stream<List<Mixer>> streamMixers(DateTime date) {
+    // Convert DateTime to String in YYYY-MM-DD format
+    String formattedDate = "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+    print(formattedDate);
+
+    return _firestore.collection('mixers').doc(formattedDate).collection('orders').snapshots().map((snapshot) {
+      List<Mixer?> mixers = snapshot.docs.map((doc) {
         final dataMap = Map<String, dynamic>.from(doc.data());
-        final mixer = Mixer.fromJson(dataMap);
-        try {
-          final mixer = Mixer.fromJson(doc.data());
-        } catch (e) {
-        }
-        return mixer;
+        return Mixer.fromJson(dataMap);
       }).toList();
+
+      // Filter out potential null values and return as List<Mixer>
+      return mixers.where((mixer) => mixer != null).cast<Mixer>().toList();
     });
   }
-
 }
 
-  final mixersRepositoryProvider = Provider<MixersRepository>((ref) {
-  return MixersRepository(FirebaseFirestore.instance, Hive.box<Mixer>('mixerBox'));
-});
-
-
-final mixerStreamProvider = StreamProvider<List<Mixer>>((ref) {
-  final repository = ref.watch(mixersRepositoryProvider);
-
-  return repository.streamMixers();
-});

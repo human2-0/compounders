@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:tuple/tuple.dart';
 
 import '../models/ingredient_model.dart';
 import '../repository/ingredients_repository.dart';
-import '../utils.dart';
 
 class UseWholeBarrel extends ConsumerWidget {
   Ingredient ingredient;
@@ -48,8 +46,8 @@ class UseWholeBarrel extends ConsumerWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Center(child: Text('Use whole barrel', style: TextStyle(fontSize: 10))),
-              SizedBox(height: 4,),
+              const Center(child: Text('Use whole barrel', style: TextStyle(fontSize: 10))),
+              const SizedBox(height: 4,),
               SizedBox(
                 height: 35,
                 child: TextField(
