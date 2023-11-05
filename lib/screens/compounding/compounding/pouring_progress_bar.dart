@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
 
 class PouringProgressBar extends StatefulWidget {
+
+  const PouringProgressBar({required this.value, required this.requiredAmount, super.key});
   final double value;
   final double requiredAmount;
 
-  const PouringProgressBar({super.key, required this.value, required this.requiredAmount});
-
   @override
-  _PouringProgressBarState createState() => _PouringProgressBarState();
+  PouringProgressBarState createState() => PouringProgressBarState();
 }
 
-class _PouringProgressBarState extends State<PouringProgressBar> {
-  double relativeValue = 0.0;
+class PouringProgressBarState extends State<PouringProgressBar> {
+  double relativeValue = 0;
   double maxDeviation = 0.0015; // maximum deviation of user value from required amount
-  double adjustedRelativeValue = 0.0; // normalize the relative value
+  double adjustedRelativeValue = 0; // normalize the relative value
   Color dotColor = Colors.blue;
 
 
@@ -44,13 +44,10 @@ class _PouringProgressBarState extends State<PouringProgressBar> {
     calculateRelativeValue();
 
     return LayoutBuilder(
-      builder: (BuildContext context, BoxConstraints constraints) {
-        return Container(
+      builder: (context, constraints) => Container(
           height: 10,
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
               colors: [
                 Colors.red.withOpacity(0.5),
                 Colors.orange.withOpacity(0.5),
@@ -73,7 +70,7 @@ class _PouringProgressBarState extends State<PouringProgressBar> {
                 child: TweenAnimationBuilder<Color?>(
                   tween: ColorTween(begin: dotColor, end: getDotColor()),
                   duration: const Duration(milliseconds: 500),
-                  builder: (BuildContext context, Color? color, Widget? child) => Container(
+                  builder: (context, color, child) => Container(
                     height: 10,
                     width: 10,
                     decoration: BoxDecoration(
@@ -86,8 +83,7 @@ class _PouringProgressBarState extends State<PouringProgressBar> {
 
             ],
           ),
-        );
-      },
+        ),
     );
   }
 }

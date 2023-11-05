@@ -1,35 +1,27 @@
 import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:compounders/models/mixers_model.dart';
 import 'package:hive/hive.dart';
 
-import '../models/mixers_models.dart';
-
 class MixersRepository {
+
+
+  MixersRepository(this._firestore, this._mixerBox);
   final FirebaseFirestore _firestore;
   late final Box<Mixer> _mixerBox;
-  late final Box _metaBox;
-
-
-  MixersRepository(this._firestore, this._mixerBox) {
-    _initMetaBox();
-  }
-
-  Future<void> _initMetaBox() async {
-    _metaBox = await Hive.openBox('metadata');
-  }
 
 
   Future<void> assignProductToMixer(String mixerId, String productId, int amountToProduce) async {
     try {
       // Get reference to the mixer document
-      DocumentReference mixerRef = _firestore.collection('mixers').doc(mixerId);
+      final DocumentReference mixerRef = _firestore.collection('mixers').doc(mixerId);
 
       // Generate a unique orderId
-      String orderId = DateTime.now().millisecondsSinceEpoch.toString() + Random().nextInt(9999).toString();
+      final orderId = DateTime.now().millisecondsSinceEpoch.toString() + Random().nextInt(9999).toString();
 
       // Build the product map
-      Map<String, dynamic> productMap = {
+      final productMap = <String, dynamic>{
         'productId': productId,
         'amountToProduce': amountToProduce
       };
@@ -53,9 +45,9 @@ class MixersRepository {
             shift: mixer.shift,
             mixerName: mixer.mixerName
         );
-        _mixerBox.put(mixerId, updatedMixer);
+        await _mixerBox.put(mixerId, updatedMixer);
       }
-    } catch (e) {
+    } on FormatException {
       rethrow;
     }
   }
@@ -63,19 +55,15 @@ class MixersRepository {
 
 
   Future<Iterable<Mixer>> getAllMixersWithAssignedProducts(DateTime date) async {
-    if (!_mixerBox.isOpen) {
-      await Hive.openBox<Mixer>('mixerBox');
-    }
-
     // Convert DateTime to String in YYYY-MM-DD format
-    String formattedDate = "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+    final formattedDate = "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
 
-    QuerySnapshot mixerSnapshot = await _firestore.collection('mixers')
+    final QuerySnapshot mixerSnapshot = await _firestore.collection('mixers')
         .doc(formattedDate)
         .collection('orders')
         .get();
 
-    List<Mixer?> mixers = mixerSnapshot.docs.map((doc) {
+    final mixers = mixerSnapshot.docs.map((doc) {
       if (doc.data() != null) {
         final mixer = Mixer.fromJson({
           'mixerId': doc.id,
@@ -95,11 +83,10 @@ class MixersRepository {
 
   Stream<List<Mixer>> streamMixers(DateTime date) {
     // Convert DateTime to String in YYYY-MM-DD format
-    String formattedDate = "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
-    print(formattedDate);
+    final formattedDate = "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
 
     return _firestore.collection('mixers').doc(formattedDate).collection('orders').snapshots().map((snapshot) {
-      List<Mixer?> mixers = snapshot.docs.map((doc) {
+      final List<Mixer?> mixers = snapshot.docs.map((doc) {
         final dataMap = Map<String, dynamic>.from(doc.data());
         return Mixer.fromJson(dataMap);
       }).toList();
@@ -109,4 +96,3 @@ class MixersRepository {
     });
   }
 }
-

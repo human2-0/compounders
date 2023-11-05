@@ -1,26 +1,13 @@
-
-import 'package:compounders/repository/ingredients_repository.dart';
-import 'package:compounders/screens/pouring.dart';
+import 'package:compounders/providers/ingredients_provider.dart';
+import 'package:compounders/providers/products_provider.dart';
+import 'package:compounders/screens/compounding/compounding/pouring.dart';
 import 'package:compounders/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tuple/tuple.dart';
-import '../models/ingredient_model.dart';
-import '../models/mixers_models.dart';
 
 class IngredientListScreen extends ConsumerStatefulWidget {
-  final AssignedProduct assignedProduct;
-  final String orderId;
-  final String productName;
-  final List<Ingredient> ingredientsList;
-
-  const IngredientListScreen(
-      {Key? key,
-      required this.assignedProduct,
-      required this.orderId,
-      required this.productName,
-      required this.ingredientsList})
-      : super(key: key);
+  const IngredientListScreen({super.key});
 
   @override
   IngredientListScreenState createState() => IngredientListScreenState();
@@ -29,52 +16,50 @@ class IngredientListScreen extends ConsumerStatefulWidget {
 class IngredientListScreenState extends ConsumerState<IngredientListScreen> {
   @override
   Widget build(BuildContext context) {
+    final orderId = ref.watch(orderIdProvider);
+    final productName = ref.watch(selectedProductProvider);
+    final ingredientsList = ref.watch(ingredientsByProductNameProvider(productName));
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(30.0),
+        preferredSize: const Size.fromHeight(30),
         child: AppBar(
           backgroundColor: Colors.black,
           leadingWidth: 30,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, size: 15.0, color: Colors.white),
+            icon: const Icon(Icons.arrow_back, size: 15, color: Colors.white),
             onPressed: () => Navigator.of(context).pop(),
           ),
           title: Center(
             child: Text(
-              widget.productName,
+              productName,
               style: const TextStyle(fontSize: 12, color: Colors.white),
             ),
           ),
         ),
       ),
       body: ListView.builder(
-        itemCount: widget.ingredientsList.length,
-        itemBuilder: (BuildContext context, int index) {
-          final Ingredient currentIngredient = widget.ingredientsList[index];
-          final String plu = currentIngredient.plu;
+        itemCount: ingredientsList.length,
+        itemBuilder: (context, index) {
+          final currentIngredient = ingredientsList[index];
+          final plu = currentIngredient.plu;
           final ingredientName = currentIngredient.name;
           final ingredientPercentage = currentIngredient.percentage;
           return GestureDetector(
-            onTap: () {
-              Navigator.push(
+            onTap: () async {
+              await Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) {
-                    return PouringScreen(
-                        ingredient: currentIngredient, orderId: widget.orderId);
-                  },
+                  builder: (context) => PouringScreen(ingredient: currentIngredient, orderId: orderId),
                 ),
               );
             },
             child: Consumer(builder: (context, ref, child) {
-              final amountState = ref.watch(amountStateProvider(
-                  Tuple2(widget.orderId, currentIngredient)));
-              final isCompleted = formatPrecision(amountState.usedAmount) >=
-                  (0.998 * amountState.requiredAmount);
+              final amountState = ref.watch(amountStateProvider(Tuple2(orderId, currentIngredient)));
+              final isCompleted = formatPrecision(amountState.usedAmount) >= (0.998 * amountState.requiredAmount);
               return Container(
-                margin: const EdgeInsets.symmetric(vertical: 2.0),
-                padding: const EdgeInsets.all(4.0),
+                margin: const EdgeInsets.symmetric(vertical: 2),
+                padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
                   color: Colors.grey.shade800,
                   borderRadius: BorderRadius.circular(10),
@@ -86,9 +71,7 @@ class IngredientListScreenState extends ConsumerState<IngredientListScreen> {
                       child: IconButton(
                         iconSize: 20,
                         icon: Icon(
-                          isCompleted
-                              ? Icons.science_rounded
-                              : Icons.science_outlined,
+                          isCompleted ? Icons.science_rounded : Icons.science_outlined,
                           color: isCompleted ? Colors.green : Colors.red,
                         ),
                         onPressed: () {},
@@ -106,7 +89,7 @@ class IngredientListScreenState extends ConsumerState<IngredientListScreen> {
                           ),
                         ),
                         Text(
-                          'Amount: ${ingredientPercentage * widget.assignedProduct.amountToProduce} kg',
+                          'Amount: ${ingredientPercentage * currentIngredient.amountToProduce} kg',
                           style: const TextStyle(
                             fontSize: 12,
                             color: Colors.grey,

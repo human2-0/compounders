@@ -1,14 +1,15 @@
-import 'package:flutter/material.dart';
+import 'package:compounders/firebase_options.dart';
+import 'package:compounders/models/ingredient_model.dart';
+import 'package:compounders/models/mixers_model.dart';
+import 'package:compounders/models/product_model.dart';
+import 'package:compounders/models/used_amount_model.dart';
 import 'package:compounders/providers/router_provider.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart' as path_provider;
-import 'firebase_options.dart';
-import 'models/ingredient_model.dart';
-import 'models/mixers_models.dart';
-import 'models/product_model.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -21,20 +22,27 @@ Future<void> initializeApp() async {
   tz.setLocalLocation(tz.getLocation('Europe/London'));
 
   final appDocumentDirectory = await path_provider.getApplicationDocumentsDirectory();
-  Hive.init(appDocumentDirectory.path);
+  Hive..init(appDocumentDirectory.path)
 
-  Hive.registerAdapter(IngredientStateAdapter());
-  Hive.registerAdapter(MixerAdapter());
-  Hive.registerAdapter(ProductAdapter());
-  Hive.registerAdapter(ProductDetailsAdapter());
+  ..registerAdapter(IngredientStateAdapter())
+  ..registerAdapter(MixerAdapter())
+  ..registerAdapter(ProductAdapter())
+  ..registerAdapter(ProductDetailsAdapter())
+  ..registerAdapter<IngredientData>(IngredientDataAdapter())
+  ..registerAdapter(UsedAmountDataAdapter())
+  ..registerAdapter(IngredientFormulaAdapter());
+
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   await Hive.openBox<Mixer>('mixerBox');
   await Hive.openBox<ProductDetails>('productDetailsBox');
+  await Hive.openBox<UsedAmountData>('pouredAmountBox');
+  await Hive.openBox<IngredientState>('ingredientBox');
   await Hive.openBox('metadata');
   await Hive.openBox('pouring_data');
-  cleanupOldHiveData();
+
+  await cleanupOldHiveData();
 }
 
 void main() async {
@@ -47,8 +55,11 @@ class MyApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    
     final router = ref.watch(routerProvider);
+
     return MaterialApp.router(
+
       debugShowCheckedModeBanner: false,
       routerConfig: router,
     );
@@ -57,20 +68,25 @@ class MyApp extends ConsumerWidget {
 
 Future<void> cleanupOldHiveData() async {
   final currentDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
-  final box = await Hive.openBox('pouredAmountBox');
+  final box = Hive.box<UsedAmountData>('pouredAmountBox');
 
   final keysToRemove = [];
 
-  // iterate over all keys in the box
-  for (var key in box.keys) {
-    final data = box.get(key);
-    if (data['date'] != currentDate) {
-      keysToRemove.add(key);
+  for (final key in box.keys) {
+    final dataRaw = box.get(key);
+    // Print the raw data
+
+    // Directly access the data
+    if (dataRaw is Map) {
+      final date = dataRaw?.date;
+      if (date != null && date != currentDate) {
+        keysToRemove.add(key);
+      }
     }
   }
 
   // Remove outdated records
-  for (var key in keysToRemove) {
-    box.delete(key);
+  for (final key in keysToRemove) {
+    await box.delete(key);
   }
 }

@@ -1,34 +1,42 @@
+import 'package:compounders/models/ingredient_model.dart';
+import 'package:compounders/models/used_amount_model.dart';
+import 'package:compounders/providers/ingredients_provider.dart';
+import 'package:compounders/repository/ingredients_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hive/hive.dart';
+import 'package:intl/intl.dart';
 import 'package:tuple/tuple.dart';
 
-import '../models/ingredient_model.dart';
-import '../repository/ingredients_repository.dart';
-
 class UseWholeBarrel extends ConsumerWidget {
-  Ingredient ingredient;
-  double requiredAmount;
-  double stock;
-  String orderId;
 
-  UseWholeBarrel({Key? key, required this.ingredient, required this.requiredAmount, required this.stock, required this.orderId}) : super(key: key);
-  double tareWeight = 0;
-  double barrelWeight = 0;
-  double emptyBarrelWeight = 0;
-  double overUsedAmount = 0;
+  const UseWholeBarrel({required this.ingredient, required this.requiredAmount, required this.stock, required this.orderId, super.key});
+  final Ingredient ingredient;
+  final double requiredAmount;
+  final double stock;
+  final String orderId;
 
-  void updateUsedAmount(
+  Future<void> updateUsedAmount(
       WidgetRef ref, Ingredient ingredient, double newUsedAmount) async {
-    final box = await ref.read(pouredAmountBoxProvider.future);
-    await box.put(ingredient.plu, newUsedAmount);
+    final box = Hive.box<UsedAmountData>('pouredAmountBox');
 
-    final amountStateNotifier =
-    ref.watch(amountStateProvider(Tuple2(orderId,ingredient)).notifier);
-    amountStateNotifier.updateUsedAmount(newUsedAmount);
+    // Create a UsedAmountData object with the current date and newUsedAmount
+    final currentDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final dataToStore = UsedAmountData(date: currentDate, usedAmount: newUsedAmount);
+
+    // Put the UsedAmountData object into the Hive box
+    await box.put(ingredient.plu, dataToStore);
+
+    await ref.watch(amountStateProvider(Tuple2(orderId, ingredient)).notifier).updateUsedAmount(newUsedAmount);
   }
+
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    late double tareWeight;
+    late double barrelWeight;
+    late double emptyBarrelWeight;
+    const overUsedAmount = 0.0;
     final height = MediaQuery.of(context).size.height;
     return Theme(
       data: ThemeData(
@@ -42,7 +50,7 @@ class UseWholeBarrel extends ConsumerWidget {
       ),
       child: Scaffold(
         body: Padding(
-          padding: const EdgeInsets.all(4.0),
+          padding: const EdgeInsets.all(4),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -56,17 +64,17 @@ class UseWholeBarrel extends ConsumerWidget {
                     labelStyle: TextStyle(color: Colors.white),
                     hintStyle: TextStyle(color: Colors.white70),
                     contentPadding:
-                    EdgeInsets.symmetric(vertical: 10.0, horizontal: 20.0),
+                    EdgeInsets.symmetric(vertical: 10, horizontal: 20),
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(20.0)),
+                      borderRadius: BorderRadius.all(Radius.circular(20)),
                     ),
                     enabledBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: Colors.white70, width: 1.0),
-                      borderRadius: BorderRadius.all(Radius.circular(20.0)),
+                      borderSide: BorderSide(color: Colors.white70),
+                      borderRadius: BorderRadius.all(Radius.circular(20)),
                     ),
                     focusedBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: Colors.white70, width: 2.0),
-                      borderRadius: BorderRadius.all(Radius.circular(20.0)),
+                      borderSide: BorderSide(color: Colors.white70, width: 2),
+                      borderRadius: BorderRadius.all(Radius.circular(20)),
                     ),
                   ),
                   style: const TextStyle(color: Colors.white),
@@ -85,17 +93,17 @@ class UseWholeBarrel extends ConsumerWidget {
                     labelStyle: TextStyle(color: Colors.white),
                     hintStyle: TextStyle(color: Colors.white70),
                     contentPadding:
-                    EdgeInsets.symmetric(vertical: 10.0, horizontal: 20.0),
+                    EdgeInsets.symmetric(vertical: 10, horizontal: 20),
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(20.0)),
+                      borderRadius: BorderRadius.all(Radius.circular(20)),
                     ),
                     enabledBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: Colors.white70, width: 1.0),
-                      borderRadius: BorderRadius.all(Radius.circular(20.0)),
+                      borderSide: BorderSide(color: Colors.white70),
+                      borderRadius: BorderRadius.all(Radius.circular(20)),
                     ),
                     focusedBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: Colors.white70, width: 2.0),
-                      borderRadius: BorderRadius.all(Radius.circular(20.0)),
+                      borderSide: BorderSide(color: Colors.white70, width: 2),
+                      borderRadius: BorderRadius.all(Radius.circular(20)),
                     ),
                   ),
                   style: const TextStyle(color: Colors.white),
@@ -114,17 +122,17 @@ class UseWholeBarrel extends ConsumerWidget {
                     labelStyle: TextStyle(color: Colors.white),
                     hintStyle: TextStyle(color: Colors.white70),
                     contentPadding:
-                    EdgeInsets.symmetric(vertical: 10.0, horizontal: 20.0),
+                    EdgeInsets.symmetric(vertical: 10, horizontal: 20),
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(20.0)),
+                      borderRadius: BorderRadius.all(Radius.circular(20)),
                     ),
                     enabledBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: Colors.white70, width: 1.0),
-                      borderRadius: BorderRadius.all(Radius.circular(20.0)),
+                      borderSide: BorderSide(color: Colors.white70),
+                      borderRadius: BorderRadius.all(Radius.circular(20)),
                     ),
                     focusedBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: Colors.white70, width: 2.0),
-                      borderRadius: BorderRadius.all(Radius.circular(20.0)),
+                      borderSide: BorderSide(color: Colors.white70, width: 2),
+                      borderRadius: BorderRadius.all(Radius.circular(20)),
                     ),
                   ),
                   style: const TextStyle(color: Colors.white, fontSize: 14),
@@ -154,17 +162,17 @@ class UseWholeBarrel extends ConsumerWidget {
                         );
                         return;
                       }
-                      double wastedAmount = emptyBarrelWeight - tareWeight;
-                      double usedAmount = barrelWeight - wastedAmount;
-                      ref.read(ingredientRepositoryProvider).pourWholeBarrel(usedAmount, wastedAmount, ingredient.plu);
+                      final wastedAmount = emptyBarrelWeight - tareWeight;
+                      final usedAmount = barrelWeight - wastedAmount;
+                      await ref.read(ingredientRepositoryProvider).pourWholeBarrel(usedAmount, wastedAmount, ingredient.plu);
 
-                      updateUsedAmount(ref,
+                      await updateUsedAmount(ref,
                           ingredient, usedAmount);
 
 
 
-                        IngredientLog log = IngredientLog(
-                          userId: "human2-0",
+                        final log = IngredientLog(
+                          userId: 'human2-0',
                           productName: ingredient.productName,
                           ingredientId: ingredient.plu,
                           ingredientName: ingredient.name,

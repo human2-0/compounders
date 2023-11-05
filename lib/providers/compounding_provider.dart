@@ -1,19 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:compounders/models/mixers_model.dart';
+import 'package:compounders/repository/mixers_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive/hive.dart';
 
-import '../models/mixers_models.dart';
-import '../repository/mixers_repository.dart';
+final dateProvider = StateProvider<DateTime>((ref) => DateTime.now());
 
-final dateProvider = StateProvider<DateTime>((ref) {
-  // Return today's date as an example.
-  // You could also fetch or calculate the desired date based on your requirements.
-  return DateTime.now();
-});
-
-final mixersRepositoryProvider = Provider<MixersRepository>((ref) {
-  return MixersRepository(FirebaseFirestore.instance, Hive.box<Mixer>('mixerBox'));
-});
+final mixersRepositoryProvider = Provider<MixersRepository>((ref) => MixersRepository(FirebaseFirestore.instance, Hive.box<Mixer>('mixerBox')));
 
 
 final mixerStreamProvider = StreamProvider<List<Mixer>>((ref) {
@@ -22,4 +15,3 @@ final mixerStreamProvider = StreamProvider<List<Mixer>>((ref) {
 
   return repository.streamMixers(date);
 });
-

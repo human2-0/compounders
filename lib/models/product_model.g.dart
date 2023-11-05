@@ -55,7 +55,7 @@ class ProductDetailsAdapter extends TypeAdapter<ProductDetails> {
     };
     return ProductDetails(
       productName: fields[0] as String,
-      productFormula: (fields[1] as Map).cast<String, dynamic>(),
+      productFormula: (fields[1] as Map).cast<String, IngredientFormula>(),
     );
   }
 
@@ -76,6 +76,43 @@ class ProductDetailsAdapter extends TypeAdapter<ProductDetails> {
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is ProductDetailsAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}
+
+class IngredientFormulaAdapter extends TypeAdapter<IngredientFormula> {
+  @override
+  final int typeId = 6;
+
+  @override
+  IngredientFormula read(BinaryReader reader) {
+    final numOfFields = reader.readByte();
+    final fields = <int, dynamic>{
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+    };
+    return IngredientFormula(
+      ingredientName: fields[0] as String,
+      percentage: fields[1] as double,
+    );
+  }
+
+  @override
+  void write(BinaryWriter writer, IngredientFormula obj) {
+    writer
+      ..writeByte(2)
+      ..writeByte(0)
+      ..write(obj.ingredientName)
+      ..writeByte(1)
+      ..write(obj.percentage);
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is IngredientFormulaAdapter &&
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }

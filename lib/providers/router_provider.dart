@@ -4,7 +4,10 @@ import 'dart:async';
 import 'package:compounders/providers/auth_provider.dart';
 import 'package:compounders/providers/states/login_controller.dart';
 import 'package:compounders/providers/states/login_states.dart';
-import 'package:compounders/screens/mixers.dart';
+import 'package:compounders/screens/compounding/ingredient_list/ingredient_list.dart';
+import 'package:compounders/screens/compounding/mixers/calendar_selector.dart';
+import 'package:compounders/screens/compounding/mixers/mixers.dart';
+import 'package:compounders/screens/compounding/product_list.dart';
 import 'package:compounders/screens/protect_screen.dart';
 import 'package:compounders/screens/sign_in.dart';
 import 'package:flutter/material.dart';
@@ -29,7 +32,6 @@ final routerProvider = Provider<GoRouter>((ref) {
 });
 
 class RouterNotifier extends ChangeNotifier {
-  final Ref _ref;
 
   RouterNotifier(this._ref) {
     _ref.listen<LoginState>(
@@ -37,6 +39,7 @@ class RouterNotifier extends ChangeNotifier {
           (_, __) => notifyListeners(),
     );
   }
+  final Ref _ref;
 
   List<GoRoute> get _routes =>
       [
@@ -56,11 +59,25 @@ class RouterNotifier extends ChangeNotifier {
           builder: (context, state) => const ProtectScreen(),
           path: '/protect',
         ),
+        GoRoute(
+          name: 'calendar',
+          builder: (context, state) => const CalendarSelector(),
+          path: '/calendar',
+        ),
+        GoRoute(
+          name: 'product_list',
+          builder: (context, state) => const ProductListScreen(),
+          path: '/product_list',
+        ),
+        GoRoute(
+          name: 'ingredient_list',
+          builder: (context, state) => const IngredientListScreen(),
+          path: '/ingredient_list',
+        ),
       ];
 
 
-  FutureOr<String?> _redirect(user, userData) async {
-    return null;
+  FutureOr<String?> _redirect(user, userData) async => null;
   
     // The logic remains the same.
   //   if (user == null) {
@@ -74,5 +91,5 @@ class RouterNotifier extends ChangeNotifier {
   //       return '/';
   //     }
   //   }
-   }
+   //}
 }

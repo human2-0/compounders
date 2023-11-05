@@ -1,9 +1,9 @@
+import 'package:compounders/providers/compounding_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
-
-import '../providers/compounding_provider.dart';
 
 class CalendarSelector extends ConsumerWidget {
   const CalendarSelector({super.key});
@@ -17,15 +17,16 @@ class CalendarSelector extends ConsumerWidget {
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(35.0),
+        preferredSize: const Size.fromHeight(35),
         child: AppBar(
           backgroundColor: Colors.black,
           leadingWidth: 12,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios, size: 18), // Use arrow_back_ios for a smaller arrow
             onPressed: () {
-              Navigator.of(context).pop(); // This will pop the current screen
+              GoRouter.of(context).pop();
             },
+
           ),
           title: Text(DateFormat('MMMM').format(currentDate), style: const TextStyle(fontSize: 8)),
           actions: [
@@ -34,7 +35,7 @@ class CalendarSelector extends ConsumerWidget {
               child: IconButton(
                 icon: const Icon(Icons.arrow_back, size: 15),
                 onPressed: () {
-                  final prevMonth = DateTime(currentDate.year, currentDate.month - 1, 1);
+                  final prevMonth = DateTime(currentDate.year, currentDate.month - 1);
                   ref.read(dateProvider.notifier).state = prevMonth;
                 },
               ),
@@ -48,7 +49,7 @@ class CalendarSelector extends ConsumerWidget {
                   size: 15,
                 ),
                 onPressed: () {
-                  final nextMonth = DateTime(currentDate.year, currentDate.month + 1, 1);
+                  final nextMonth = DateTime(currentDate.year, currentDate.month + 1);
                   ref.read(dateProvider.notifier).state = nextMonth;
                 },
               ),
@@ -75,7 +76,7 @@ class CalendarSelector extends ConsumerWidget {
                   crossAxisCount: 7,
                 ),
                 itemBuilder: (context, index) {
-                  final firstDayOfTheMonth = DateTime(currentDate.year, currentDate.month, 1);
+                  final firstDayOfTheMonth = DateTime(currentDate.year, currentDate.month);
                   final startingWeekday = firstDayOfTheMonth.weekday; // 1 = Monday, 7 = Sunday
 
                   if (index < startingWeekday - 1) {
@@ -96,7 +97,7 @@ class CalendarSelector extends ConsumerWidget {
                       ref.read(dateProvider.notifier).state = displayDate;
                     },
                     child: Container(
-                      margin: const EdgeInsets.all(4.0),
+                      margin: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
                         color: isSameDay(displayDate, currentDate) ? Colors.blue : Colors.grey[300],
                         borderRadius: BorderRadius.circular(10),

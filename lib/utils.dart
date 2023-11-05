@@ -2,15 +2,15 @@ import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/timezone.dart';
 
 class CycleDateRange {
-  DateTime startDate;
-  DateTime endDate;
 
   CycleDateRange(this.startDate, this.endDate);
+  DateTime startDate;
+  DateTime endDate;
 }
 
 CycleDateRange getCurrentCycleDateRange(DateTime today) {
   DateTime getLastThursday(DateTime monthYear) {
-    DateTime lastDay = DateTime(monthYear.year, monthYear.month + 1, 0); // Last day of the month
+    var lastDay = DateTime(monthYear.year, monthYear.month + 1, 0); // Last day of the month
     // Go back from the last day of the month until it's Thursday
     while (lastDay.weekday != DateTime.thursday) {
       lastDay = lastDay.subtract(const Duration(days: 1));
@@ -18,9 +18,9 @@ CycleDateRange getCurrentCycleDateRange(DateTime today) {
     return lastDay;
   }
 
-  DateTime lastThursdayThisMonth = getLastThursday(today);
-  DateTime lastThursdayPrevMonth = getLastThursday(DateTime(today.year, today.month - 1, 1));
-  DateTime lastThursdayNextMonth = getLastThursday(DateTime(today.year, today.month + 1, 1));
+  final lastThursdayThisMonth = getLastThursday(today);
+  final lastThursdayPrevMonth = getLastThursday(DateTime(today.year, today.month - 1));
+  final lastThursdayNextMonth = getLastThursday(DateTime(today.year, today.month + 1));
 
   if (today.isBefore(lastThursdayThisMonth) || today.isAtSameMomentAs(lastThursdayThisMonth)) {
     return CycleDateRange(lastThursdayPrevMonth.add(const Duration(days: 1)), lastThursdayThisMonth);
@@ -34,7 +34,7 @@ CycleDateRange getCurrentCycleDateRange(DateTime today) {
 DateTime getLastThursdayOfMonth(DateTime date) {
   final lastDayOfMonth = DateTime(date.year, date.month + 1, 0); // This gets the last day of the month.
   // We'll go back in days from the last day until we find a Thursday.
-  for (int i = 0; i < 7; i++) {
+  for (var i = 0; i < 7; i++) {
     if (lastDayOfMonth.subtract(Duration(days: i)).weekday == DateTime.thursday) {
       return lastDayOfMonth.subtract(Duration(days: i));
     }
@@ -51,6 +51,4 @@ TZDateTime getCurrentLocalTime() {
   return now;
 }
 
-double formatPrecision(double value, [int precision = 3]) {
-  return double.parse(value.toStringAsFixed(precision));
-}
+double formatPrecision(double value, [int precision = 3]) => double.parse(value.toStringAsFixed(precision));

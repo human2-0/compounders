@@ -1,22 +1,22 @@
-import 'package:compounders/repository/ingredients_repository.dart';
+import 'package:compounders/providers/ingredients_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tuple/tuple.dart';
 
-import '../models/ingredient_model.dart';
-
 class IngredientsDoneCheck extends ConsumerWidget {
-  final String orderId;
-  final List<Ingredient> ingredientsList;
-
   const IngredientsDoneCheck({
-    Key? key,
     required this.orderId,
-    required this.ingredientsList,
-  }) : super(key: key);
+    required this.productName,
+    // required this.ingredientsList,
+    super.key,
+  });
+  final String orderId;
+  final String productName;
+  // final List<Ingredient> ingredientsList;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final ingredientsList = ref.watch(ingredientsByProductNameProvider(productName));
     final check = ref.watch(allIngredientsMeetConditionProvider(Tuple2(orderId, ingredientsList)));
 
     return check.when(
@@ -35,17 +35,11 @@ class IngredientsDoneCheck extends ConsumerWidget {
           );
         }
       },
-      error: (error, stackTrace) {
-        // Handle error state. You can also show a text message or some other widget.
-        return const Icon(
-          Icons.error_outline,
-          color: Colors.red,
-        );
-      },
-      loading: () {
-        // Show a loading state, for instance, a CircularProgressIndicator.
-        return const CircularProgressIndicator();
-      },
+      error: (error, stackTrace) => const Icon(
+        Icons.error_outline,
+        color: Colors.red,
+      ),
+      loading: () => const CircularProgressIndicator(),
     );
   }
 }

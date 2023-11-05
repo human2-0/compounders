@@ -1,6 +1,6 @@
+import 'package:compounders/providers/states/login_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:compounders/providers/states/login_controller.dart';
 
 class ProtectScreen extends ConsumerStatefulWidget {
   const ProtectScreen({super.key});
@@ -11,8 +11,7 @@ class ProtectScreen extends ConsumerStatefulWidget {
 
 class _ProtectState extends ConsumerState<ProtectScreen> {
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
+  Widget build(BuildContext context) => Scaffold(
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -23,8 +22,8 @@ class _ProtectState extends ConsumerState<ProtectScreen> {
             ),
             const SizedBox(height: 20),
             ElevatedButton(
-              onPressed: () {
-                ref.read(loginControllerProvider.notifier).signOut();
+              onPressed: () async {
+                await ref.read(loginControllerProvider.notifier).signOut();
               },
               child: const Text('Sign Out'),
             ),
@@ -32,5 +31,4 @@ class _ProtectState extends ConsumerState<ProtectScreen> {
         ),
       ),
     );
-  }
 }

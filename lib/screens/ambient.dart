@@ -7,11 +7,7 @@ class AmbientScreen extends ConsumerWidget {
 
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return WatchShape(
-        builder: (BuildContext context, WearShape shape, Widget? child) {
-          return const Text('Ambient Screen', style: TextStyle(fontSize: 7),);
-        }
+  Widget build(BuildContext context, WidgetRef ref) => WatchShape(
+        builder: (context, shape, child) => const Text('Ambient Screen', style: TextStyle(fontSize: 7),)
     );
-  }
 }

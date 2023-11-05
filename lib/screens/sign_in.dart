@@ -1,12 +1,12 @@
+import 'package:compounders/providers/states/login_controller.dart';
+import 'package:compounders/providers/states/login_states.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:wear/wear.dart';
-import '../providers/states/login_states.dart';
-import '../providers/states/login_controller.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:wear/wear.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
-  const LoginScreen({Key? key}) : super(key: key);
+  const LoginScreen({super.key});
 
   @override
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
@@ -36,9 +36,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             height: MediaQuery.of(context).size.height,
           ),
           WatchShape(
-            builder: (BuildContext context, WearShape shape, Widget? child) {
-              final bool isRound = shape == WearShape.round;
-              final double screenFraction = MediaQuery.of(context).size.width * 0.5;
+            builder: (context, shape, child) {
+              final isRound = shape == WearShape.round;
+              final screenFraction = MediaQuery.of(context).size.width * 0.5;
 
               return Center(
                 child: Padding(

@@ -2,10 +2,38 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hive/hive.dart';
 
 
-part 'mixers_models.g.dart'; // The generated file for Hive adapter, ensure you create this
+part 'mixers_model.g.dart'; // The generated file for Hive adapter, ensure you create this
 
 @HiveType(typeId: 2)
 class Mixer {
+
+  Mixer({
+    required this.mixerId,
+    required this.assignedProducts,
+    required this.lastUpdated,
+    required this.shift,
+    required this.mixerName,
+  });
+
+  factory Mixer.fromJson(Map<String, dynamic> json) {
+    final productsMap = <String, AssignedProduct>{};
+
+    // Safely cast and handle potential null or missing values
+    final assignedProductsMap = json['assignedProducts'] as Map<String, dynamic>?;
+    if (assignedProductsMap != null) {
+      assignedProductsMap.forEach((key, value) {
+        productsMap[key] = AssignedProduct.fromJson(value as Map<String, dynamic>);
+      });
+    }
+
+    return Mixer(
+      mixerId: json['mixerId'] as String? ?? 'Unknown',
+      assignedProducts: productsMap,
+      lastUpdated: (json['lastUpdated'] is Timestamp) ? (json['lastUpdated'] as Timestamp).toDate() : DateTime.now(),
+      shift: json['shift'] as String? ?? 'Default Shift',
+      mixerName: json['mixerName'] as String ?? 'Default Mixer Name',
+    );
+  }
   @HiveField(0)
   final String mixerId;
 
@@ -22,38 +50,9 @@ class Mixer {
   @HiveField(5)
   final String mixerName;
 
-  Mixer({
-    required this.mixerId,
-    required this.assignedProducts,
-    required this.lastUpdated,
-    required this.shift,
-    required this.mixerName,
-  });
-
-  factory Mixer.fromJson(Map<String, dynamic> json) {
-    Map<String, AssignedProduct> productsMap = {};
-
-    // Safely cast and handle potential null or missing values
-    Map<String, dynamic>? assignedProductsMap = json['assignedProducts'] as Map<String, dynamic>?;
-    if (assignedProductsMap != null) {
-      assignedProductsMap.forEach((key, value) {
-        productsMap[key] = AssignedProduct.fromJson(value as Map<String, dynamic>);
-      });
-    }
-
-    return Mixer(
-      mixerId: json['mixerId'] ?? "Unknown",
-      assignedProducts: productsMap,
-      // Safely convert Timestamp to DateTime
-      lastUpdated: (json['lastUpdated'] as Timestamp?)!.toDate(),
-      shift: json['shift'],
-      mixerName: json['mixerName'],
-    );
-  }
-
 
   Map<String, dynamic> toJson() {
-    Map<String, dynamic> productsMap = {};
+    final productsMap = <String, dynamic>{};
     assignedProducts.forEach((key, value) {
       productsMap[key] = value.toJson();
     });
@@ -68,26 +67,18 @@ class Mixer {
 }
 
 class AssignedProduct {
-  final String productId;
-  final int amountToProduce;
 
   AssignedProduct({required this.productId, required this.amountToProduce});
 
-  factory AssignedProduct.fromJson(Map<String, dynamic> json) {
-    return AssignedProduct(
-      productId: json['productId'],
-      amountToProduce: json['amountToProduce'],
+  factory AssignedProduct.fromJson(Map<String, dynamic> json) => AssignedProduct(
+      productId: json['productId'] as String,
+      amountToProduce: json['amountToProduce'] as int,
     );
-  }
+  final String productId;
+  final int amountToProduce;
 
-  Map<String, dynamic> toJson() {
-    return {
+  Map<String, dynamic> toJson() => {
       'productId': productId,
       'amountToProduce': amountToProduce,
     };
-  }
 }
-
-
-
-
