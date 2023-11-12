@@ -1,11 +1,26 @@
-import 'package:compounders/providers/compounding_provider.dart';
+import 'package:compounders/providers/mixers_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
 
+/// `CalendarSelector` is a widget that allows users to select a date from a calendar view.
+///
+/// This widget watches the current date state using Riverpod's `dateProvider` and displays
+/// a calendar for the current month. It provides navigation for going back and forth between
+/// months and handles date selection, updating the state accordingly.
+///
+/// The calendar UI is composed of a grid that represents the days of the month, allowing
+/// the user to tap on a day to select it. Days from the previous or next months are not displayed.
+///
+/// The widget uses a Scaffold with a black background and a compact AppBar to navigate
+/// back or to switch between months.
+///
+/// Parameters:
+///   - `key`: A [Key] used to identify this widget within the widget tree.
 class CalendarSelector extends ConsumerWidget {
+  /// Constructs a `CalendarSelector` widget.
   const CalendarSelector({super.key});
 
   @override

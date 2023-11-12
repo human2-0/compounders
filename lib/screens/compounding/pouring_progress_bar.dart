@@ -80,7 +80,6 @@ class PouringProgressBarState extends State<PouringProgressBar> {
                   ),
                 ),
               ),
-
             ],
           ),
         ),

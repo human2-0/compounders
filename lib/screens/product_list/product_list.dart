@@ -1,19 +1,27 @@
 import 'package:compounders/providers/mixers_provider.dart';
 import 'package:compounders/providers/products_provider.dart';
-import 'package:compounders/screens/compounding/ingredient_list/ingredients_done_check.dart';
+import 'package:compounders/screens/product_list/ingredients_done_check.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-class ProductListScreen extends ConsumerStatefulWidget {
+/// `ProductListScreen` presents a list of products associated with the selected mixer.
+///
+/// It retrieves the current product list and mixer name from the application's state using
+/// Riverpod's state management. The list is displayed in a `ListView.builder`, with each item
+/// being tappable and leading to a detailed ingredient list for the selected product.
+///
+/// The screen uses a black-themed `Scaffold` with an `AppBar` displaying the mixer's name.
+/// The body of the scaffold updates based on the state of the product list: it shows a loading
+/// indicator while fetching data, and each product has an icon indicator if the product is ready to issue 'mix sheet'.
+///
+/// Parameters:
+///   - `key`: A [Key] used to uniquely identify the widget in the widget tree.
+class ProductListScreen extends ConsumerWidget {
+  /// Constructs a `ProductListScreen` widget.
   const ProductListScreen({super.key});
   @override
-  ProductListScreenState createState() => ProductListScreenState();
-}
-
-class ProductListScreenState extends ConsumerState<ProductListScreen> {
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final productListAsyncValue = ref.watch(consolidatedProductListProvider);
     final mixerName = ref.watch(currentMixerProvider);
 
@@ -36,13 +44,10 @@ class ProductListScreenState extends ConsumerState<ProductListScreen> {
             itemCount: productDisplayList.length,
             itemBuilder: (context, index) {
               final productDisplayData = productDisplayList[index];
-              final productData = productDisplayData.productDetails;
-              final assignedProduct = productDisplayData.product;
-              final orderId = productDisplayData.queryData.orderId;
               return GestureDetector(
                 onTap: () async {
-                  ref.read(selectedProductProvider.notifier).state = productData.productName;
-                  ref.read(orderIdProvider.notifier).state = orderId;
+                  ref.read(selectedProductProvider.notifier).state = productDisplayData.productDetails.productName;
+                  ref.read(orderIdProvider.notifier).state = productDisplayData.queryData.orderId;
                   await GoRouter.of(context).push('/ingredient_list');
                 },
                 child: Container(
@@ -54,17 +59,20 @@ class ProductListScreenState extends ConsumerState<ProductListScreen> {
                   ),
                   child: Row(
                     children: [
-                      IngredientsDoneCheck(orderId: orderId, productName: productData.productName),
+                      IngredientsDoneCheck(
+                          orderId:  productDisplayData.queryData.orderId,
+                          productName: productDisplayData.productDetails.productName
+                      ),
                       const SizedBox(width: 16),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            productData.productName,
+                            productDisplayData.productDetails.productName,
                             style: const TextStyle(fontSize: 12, color: Colors.white),
                           ),
                           Text(
-                            'to make: ${assignedProduct.amountToProduce} kg',
+                            'to make: ${productDisplayData.product.amountToProduce} kg',
                             style: const TextStyle(fontSize: 10, color: Colors.grey),
                           ),
                         ],

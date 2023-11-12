@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:compounders/models/ingredient_model.dart';
-import 'package:compounders/providers/compounding_provider.dart';
 import 'package:compounders/providers/mixers_provider.dart';
 import 'package:compounders/screens/ambient.dart';
 import 'package:flutter/material.dart';
@@ -11,13 +10,29 @@ import 'package:go_router/go_router.dart';
 import 'package:hive/hive.dart';
 import 'package:wear/wear.dart';
 
+/// `MixersScreen` is a stateful widget that builds the UI for displaying mixers.
+///
+/// This widget sets up a watch on the application's router and provides a UI
+/// that reacts to changes in the mixers' data. The widget uses the Riverpod package
+/// for state management, allowing it to listen for updates and rebuild as needed.
+///
 class MixersScreen extends ConsumerStatefulWidget {
+  /// Parameters:
+  ///   - `key`: A [Key] which is passed to the super class to uniquely identify the widget
+  ///     within the widget tree. It can be useful for preserving the widget state.
   const MixersScreen({super.key});
 
   @override
   MixersScreenState createState() => MixersScreenState();
 }
 
+/// `MixersScreenState` is the state class that manages the state of the `MixersScreen` widget.
+///
+/// It fetches initial mixer data from a Firestore collection and populates a Hive box with it.
+/// The state listens for updates to mixer data and rebuilds its UI when data changes occur.
+///
+/// The UI includes an AppBar and a GridView to display the mixers. Each mixer is represented
+/// as a card, and the user can interact with these cards.
 class MixersScreenState extends ConsumerState<MixersScreen> {
 
   Future<void> _fetchInitialData() async {

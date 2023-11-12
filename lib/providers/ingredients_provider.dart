@@ -9,7 +9,7 @@ import 'package:intl/intl.dart';
 import 'package:tuple/tuple.dart';
 
 final isPouredProvider = StateProvider<bool>((ref) => false);
-final selectedIngredientProvider = StateProvider<Ingredient?>((ref) => null);
+final selectedIngredientProvider = StateProvider<Ingredient?>((ref)=>null);
 
 final usedAmountProvider = FutureProvider.family<UsedAmountData, Tuple2<String, Ingredient>>((ref, tuple) async {
   final orderId = tuple.item1;

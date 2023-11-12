@@ -4,10 +4,14 @@ import 'dart:async';
 import 'package:compounders/providers/auth_provider.dart';
 import 'package:compounders/providers/states/login_controller.dart';
 import 'package:compounders/providers/states/login_states.dart';
-import 'package:compounders/screens/compounding/ingredient_list/ingredient_list.dart';
-import 'package:compounders/screens/compounding/mixers/calendar_selector.dart';
-import 'package:compounders/screens/compounding/mixers/mixers.dart';
-import 'package:compounders/screens/compounding/product_list.dart';
+import 'package:compounders/screens/compounding/compounding.dart';
+import 'package:compounders/screens/compounding/confirmation_dialog.dart';
+import 'package:compounders/screens/compounding/issue_new_barrel_weights.dart';
+import 'package:compounders/screens/compounding/use_whole_barrel.dart';
+import 'package:compounders/screens/ingredient_list/ingredient_list.dart';
+import 'package:compounders/screens/mixers/calendar_selector.dart';
+import 'package:compounders/screens/mixers/mixers.dart';
+import 'package:compounders/screens/product_list/product_list.dart';
 import 'package:compounders/screens/protect_screen.dart';
 import 'package:compounders/screens/sign_in.dart';
 import 'package:flutter/material.dart';
@@ -73,6 +77,26 @@ class RouterNotifier extends ChangeNotifier {
           name: 'ingredient_list',
           builder: (context, state) => const IngredientListScreen(),
           path: '/ingredient_list',
+        ),
+        GoRoute(
+          name: 'pouring',
+          builder: (context, state) => const CompoundingScreen(),
+          path: '/pouring',
+        ),
+        GoRoute(
+          name: 'use_whole_barrel',
+          builder: (context, state) => const UseWholeBarrel(),
+          path: '/use_whole_barrel',
+        ),
+        GoRoute(
+          name: 'new_barrel',
+          builder: (context, state) => const IssueNewBarrelWeights(),
+          path: '/new_barrel',
+        ),
+        GoRoute(
+          name: 'show_confirmation_dialog',
+          builder: (context, state) => const ShowConfirmationDialog(),
+          path: '/show_confirmation_dialog',
         ),
       ];
 
