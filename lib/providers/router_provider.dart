@@ -6,8 +6,8 @@ import 'package:compounders/providers/states/login_controller.dart';
 import 'package:compounders/providers/states/login_states.dart';
 import 'package:compounders/screens/compounding/compounding.dart';
 import 'package:compounders/screens/compounding/confirmation_dialog.dart';
-import 'package:compounders/screens/compounding/issue_new_barrel_weights.dart';
-import 'package:compounders/screens/compounding/use_whole_barrel.dart';
+import 'package:compounders/screens/compounding/new_barrel.dart';
+import 'package:compounders/screens/compounding/use_all_button.dart';
 import 'package:compounders/screens/ingredient_list/ingredient_list.dart';
 import 'package:compounders/screens/mixers/calendar_selector.dart';
 import 'package:compounders/screens/mixers/mixers.dart';
@@ -84,13 +84,13 @@ class RouterNotifier extends ChangeNotifier {
           path: '/pouring',
         ),
         GoRoute(
-          name: 'use_whole_barrel',
-          builder: (context, state) => const UseWholeBarrel(),
-          path: '/use_whole_barrel',
+          name: 'use_all',
+          builder: (context, state) => const UseAllButton(),
+          path: '/use_all',
         ),
         GoRoute(
           name: 'new_barrel',
-          builder: (context, state) => const IssueNewBarrelWeights(),
+          builder: (context, state) => const NewBarrel(),
           path: '/new_barrel',
         ),
         GoRoute(

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+///This widget let user select the scale to interact with.
 class ScaleButton extends ConsumerWidget {
+  // ignore: public_member_api_docs
   const ScaleButton({super.key});
 
   @override

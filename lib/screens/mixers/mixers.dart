@@ -2,8 +2,10 @@ import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:compounders/models/ingredient_model.dart';
+import 'package:compounders/providers/ingredients_provider.dart';
 import 'package:compounders/providers/mixers_provider.dart';
 import 'package:compounders/screens/ambient.dart';
+import 'package:compounders/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -35,25 +37,22 @@ class MixersScreen extends ConsumerStatefulWidget {
 /// as a card, and the user can interact with these cards.
 class MixersScreenState extends ConsumerState<MixersScreen> {
 
-  Future<void> _fetchInitialData() async {
-    // Fetch all ingredients, or a subset based on app logic
-    final QuerySnapshot querySnapshot = await FirebaseFirestore.instance.collection('ingredients').get();
-
-    final box = await Hive.openBox<IngredientState>('ingredientBox');
-    for (final doc in querySnapshot.docs) {
-      final data = doc.data()! as Map<String, dynamic>;
-      // Convert Timestamp to DateTime
-      data['lastUpdated'] = (data['lastUpdated'] as Timestamp).toDate();
-
-      final ingredientState = IngredientState.fromMap(data);
-      await box.put(doc.id, ingredientState);
-    }
-  }
+  // Future<void> _fetchInitialData(FirebaseFirestore firestore, Box<IngredientState> box) async {
+  //   final QuerySnapshot querySnapshot = await firestore.collection('ingredients').get();
+  //   for (final doc in querySnapshot.docs) {
+  //     final data = doc.data()! as Map<String, dynamic>;
+  //     data['lastUpdated'] = (data['lastUpdated'] as Timestamp).toDate();
+  //     final ingredientState = IngredientState.fromMap(data);
+  //     await box.put(doc.id, ingredientState);
+  //   }
+  // }
 
   @override
   void initState() {
     super.initState();
-    unawaited(_fetchInitialData());
+    // final firebaseFirestore = ref.read(firebaseFirestoreProvider);
+    // final ingredientBox = ref.read(ingredientBoxProvider);
+    // unawaited( _fetchInitialData(firebaseFirestore, ingredientBox));
   }
 
   @override
@@ -184,11 +183,38 @@ class MixersScreenState extends ConsumerState<MixersScreen> {
                 );
               },
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stack) => Center(
-                  child: Text(
-                'Error: $error',
-                style: const TextStyle(fontSize: 6),
-              )),
+              error: (error, stack) {
+                // Check for network-related errors
+                var errorMessage = 'Unexpected error.$error';
+                if (error is NetworkError || error.toString().contains('UNAVAILABLE')) {
+                  errorMessage = 'Network connection lost. Please check your internet connection.';
+                }
+
+                if (error is MixerFormatException) {
+                  errorMessage = 'Invalid data format.${error.message}';
+                }
+                return Scaffold(
+                  backgroundColor: Colors.black,
+                  body: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          errorMessage,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.white, fontSize: 16), // Adjusted font size
+                        ),
+                        ElevatedButton(
+                          child: const Text('Retry'),
+                          onPressed: () {
+                            // Trigger a retry action, e.g., by calling setState or using a state management solution
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
             );
           } else {
             // Add your ambient mode UI here.

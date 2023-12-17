@@ -31,7 +31,7 @@ class Mixer {
       assignedProducts: productsMap,
       lastUpdated: (json['lastUpdated'] is Timestamp) ? (json['lastUpdated'] as Timestamp).toDate() : DateTime.now(),
       shift: json['shift'] as String? ?? 'Default Shift',
-      mixerName: json['mixerName'] as String ?? 'Default Mixer Name',
+      mixerName: json['mixerName'] as String? ?? 'Default name',
     );
   }
   @HiveField(0)

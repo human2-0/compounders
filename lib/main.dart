@@ -15,6 +15,7 @@ import 'package:timezone/timezone.dart' as tz;
 
 ///Initializes the application with necessary configurations and setups for time zones, local storage, Firebase, and data cleanup.
 Future<void> initializeApp() async {
+
   WidgetsFlutterBinding.ensureInitialized();
 
   tz.initializeTimeZones();
@@ -42,6 +43,8 @@ Future<void> initializeApp() async {
 }
 
 void main() async {
+  // isInTestMode = false; // Set this to true in your test setup
+
   await initializeApp();
   runApp(const ProviderScope(child: Compounding()));
 }

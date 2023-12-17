@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-
+///ShowConfirmationDialog is a ConsumerWidget that presents a confirmation dialog to the user within a dark-themed interface.
+///This dialog is designed to confirm if the user wishes to start using a new barrel and record the remaining amount as waste.
 class ShowConfirmationDialog extends ConsumerWidget {
+  ///key: A Key used to control how one widget replaces another widget in the tree.
   const ShowConfirmationDialog({super.key});
 
   @override

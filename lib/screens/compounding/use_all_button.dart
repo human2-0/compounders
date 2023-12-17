@@ -2,14 +2,15 @@ import 'package:compounders/models/ingredient_model.dart';
 import 'package:compounders/providers/compounding_provider.dart';
 import 'package:compounders/providers/ingredients_provider.dart';
 import 'package:compounders/providers/products_provider.dart';
-import 'package:compounders/repository/ingredients_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tuple/tuple.dart';
 
-class UseWholeBarrel extends ConsumerWidget {
-  const UseWholeBarrel({super.key});
+///This widget performs computation to use everything from the current ingredient container.
+class UseAllButton extends ConsumerWidget {
+  // ignore: public_member_api_docs
+  const UseAllButton({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

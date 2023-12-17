@@ -1,25 +1,39 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:compounders/models/ingredient_model.dart';
-import 'package:compounders/models/product_model.dart';
-import 'package:compounders/providers/products_provider.dart';
 import 'package:compounders/utils.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive/hive.dart';
 import 'package:intl/intl.dart';
 
+/// Manages interactions with Firestore for ingredient-related operations,
+/// including updating ingredient data and logging ingredient usage.
 class IngredientRepository {
+  /// Constructor that initializes the repository with a Firestore instance.
   IngredientRepository(this._firestore);
+
+  /// The Firestore instance used to perform database operations.
   final FirebaseFirestore _firestore;
 
+  /// Updates ingredient data after a pouring action.
+  /// This function should be called after an ingredient has been used (poured) during the compounding process.
+  ///
+  /// Parameters:
+  ///   - `ingredientPLU`: The unique identifier for the ingredient.
+  ///   - `usedAmount`: The amount of the ingredient that has been used.
+  ///   - `requiredAmount`: The amount of the ingredient that was required.
+  ///   - `difference`: The difference between the required amount and the used amount.
   Future<void> pourIngredient(String ingredientPLU, double usedAmount, double requiredAmount, double difference) async {
     double currentBarrelWeight;
-    // Fetch data from Hive first.
+    // Fetch data from Hive first to get the current state of the ingredient.
     final ingredientBox = await Hive.openBox<IngredientState>('ingredientBox');
     var ingredientData = ingredientBox.get(ingredientPLU);
 
+    // Handle case where the ingredient data is not found in the local database.
     if (ingredientData == null) {
       throw Exception('No data found for the given PLU in Hive.');
     }
+
+    // Calculate the new stock and barrel weight, taking into account the used amount and any difference.
+    // Throws an exception if the new stock or barrel weight is less than 0, indicating insufficient stock.
 
     var lastSynced = ingredientData.lastUpdated;
 
@@ -30,7 +44,7 @@ class IngredientRepository {
       throw Exception('Insufficient stock! Available: $currentStock, Requested: ${usedAmount + difference}');
     }
 
-      currentBarrelWeight = ingredientData.currentBarrel;
+    currentBarrelWeight = ingredientData.currentBarrel;
     var newBarrelWeight = formatPrecision(currentBarrelWeight - usedAmount - difference);
 
     if (newBarrelWeight < 0) {
@@ -40,21 +54,22 @@ class IngredientRepository {
 
     final overUsedAmount = formatPrecision((usedAmount - requiredAmount).abs());
 
-    // Calculate monthly log key
+    // Calculate monthly log key.
+    ///TODO: please get rid of the 'getCurrentCycleDateRange' and fetch existing log with boolean flag 'inUse' earlier set by administrators.
     final cycle = getCurrentCycleDateRange(DateTime.now());
     final logKey =
         '${cycle.endDate.year}-${cycle.endDate.month.toString().padLeft(2, '0')}-${cycle.endDate.day.toString().padLeft(2, '0')}';
-
+    // Run a Firestore transaction to ensure atomic updates to the ingredient data.
     return _firestore.runTransaction((transaction) async {
-      // References
+      // Firestore document references for the ingredient and its monthly logs.
       final DocumentReference ingredientRef = _firestore.collection('ingredients').doc(ingredientPLU);
       final DocumentReference monthlyLogRef = ingredientRef.collection('monthlyLogs').doc(logKey);
 
-      // Check lastUpdated timestamp before fetching the entire document
+      // Check lastUpdated timestamp before fetching the entire document.
+      // This is crucial to handle cases where the ingredient data might have been updated elsewhere (e.g., by another user or process).
       final timestampSnapshot = await transaction.get(ingredientRef);
       final timestamp = timestampSnapshot.get('lastUpdated') as Timestamp?;
       final firestoreLastUpdated = timestamp?.toDate() ?? DateTime.fromMillisecondsSinceEpoch(0);
-
 
       if (firestoreLastUpdated.isAfter(lastSynced)) {
         // Fetch the entire document if it has been updated since lastSynced
@@ -69,7 +84,8 @@ class IngredientRepository {
           tareWeight: ingredientData!.tareWeight,
           lastUpdated: lastSynced,
         );
-
+        // Update the Firestore and Hive with the new stock and barrel weight.
+        // Also update or create the monthly log with the used, overused, and wasted amounts.
         await ingredientBox.put(ingredientPLU, updatedIngredientState); // Save the updated data to Hive
 
         // Recalculate values based on the fetched ingredientData
@@ -79,7 +95,6 @@ class IngredientRepository {
         currentBarrelWeight = ingredientData!.currentBarrel;
         newBarrelWeight = formatPrecision(currentBarrelWeight - usedAmount - difference);
       }
-
 
       final logSnapshot = await transaction.get(monthlyLogRef);
 
@@ -118,6 +133,12 @@ class IngredientRepository {
     });
   }
 
+  /// Handles the process when an entire barrel of an ingredient is used.
+  ///
+  /// Parameters:
+  ///   - `usedAmount`: The amount of the ingredient that has been used from the barrel.
+  ///   - `wastedAmount`: The amount of the ingredient wasted during the process.
+  ///   - `ingredientPLU`: The unique identifier for the ingredient.
   Future<void> pourWholeBarrel(double usedAmount, double wastedAmount, String ingredientPLU) async {
     // Fetch data from Hive first.
     final ingredientBox = await Hive.openBox<IngredientState>('ingredientBox');
@@ -145,7 +166,8 @@ class IngredientRepository {
 
     // Calculate monthly log key
     final cycle = getCurrentCycleDateRange(DateTime.now());
-    final logKey = '${cycle.endDate.year}-${cycle.endDate.month.toString().padLeft(2, '0')}-${cycle.endDate.day.toString().padLeft(2, '0')}';
+    final logKey =
+        '${cycle.endDate.year}-${cycle.endDate.month.toString().padLeft(2, '0')}-${cycle.endDate.day.toString().padLeft(2, '0')}';
 
     return _firestore.runTransaction((transaction) async {
       // References
@@ -202,25 +224,27 @@ class IngredientRepository {
     });
   }
 
-
+  /// Adjusts the weight of the current barrel based on the user input value.
+  ///
+  /// Parameters:
+  ///   - `ingredientSnapshot`: The current state of the ingredient.
+  ///   - `userValue`: The value input by the user, typically the measured weight.
+  ///   - `ingredientPLU`: The unique identifier for the ingredient.
+  ///   - `usedAmount`: The amount of the ingredient that has been used.
+  ///   - `requiredAmount`: The required amount of the ingredient for the product.
   Future<void> adjustCurrentBarrelWeight(IngredientState ingredientSnapshot, double userValue, String ingredientPLU,
       double usedAmount, double requiredAmount) async {
+
     final currentBarrel = ingredientSnapshot.currentBarrel;
     final tareWeight = ingredientSnapshot.tareWeight;
-
+    // Calculate the net weight and determine if there is a negative difference.
+    // A negative difference would require adjusting the current barrel weight to reflect the actual weight.
     final netWeight = formatPrecision(userValue - tareWeight);
     var differenceBarrelCheck = formatPrecision(netWeight - (currentBarrel - usedAmount));
 
     // If difference is negative, adjust the current barrel
     if (differenceBarrelCheck < 0) {
       // Log the negative value
-
-      // Since IngredientState is an immutable class, you can't update its properties directly like this:
-      // ingredientSnapshot.currentBarrel = adjustedCurrentBarrel;
-      // Instead, create a new instance or make adjustments accordingly.
-
-      // Assuming you have a way to get the ingredientPLU from the IngredientState:
-      // (You might need to adjust this if IngredientState doesn't have ingredientPLU)
 
       await pourIngredient(ingredientPLU, usedAmount, requiredAmount, differenceBarrelCheck.abs());
     } else if (differenceBarrelCheck >= 0) {
@@ -232,6 +256,10 @@ class IngredientRepository {
     }
   }
 
+  /// Logs the ingredient usage to Firestore, detailing the used, wasted, and overused amounts.
+  ///
+  /// Parameters:
+  ///   - `log`: The [IngredientLog] object containing details of the ingredient usage.
   Future<void> productLogIngredients(IngredientLog log) async {
     final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
     final docId = '${log.userId}_${log.productName}_$today';
@@ -253,6 +281,13 @@ class IngredientRepository {
     }, SetOptions(merge: true));
   }
 
+  /// Top up the ingredient data with a new barrel and tare weight.
+  ///
+  /// Parameters:
+  ///   - `currentBarrelWeight`: The weight of the current barrel before topping up.
+  ///   - `newTareWeight`: The tare weight of the new barrel.
+  ///   - `newBarrelWeight`: The total weight of the new barrel.
+  ///   - `ingredientPLU`: The unique identifier for the ingredient.
   Future<void> topUpIngredient({
     required double currentBarrelWeight,
     required double newTareWeight,
@@ -278,13 +313,13 @@ class IngredientRepository {
       // Update or set the monthly log in Firestore for wastedAmount
       if (logSnapshot.exists) {
         transaction.update(monthlyLogRef, {
-          'wastedAmount': FieldValue.increment(wastedAmount),
+          'wastedAmount': FieldValue.increment(formatPrecision(wastedAmount)),
         });
       } else {
         transaction.set(monthlyLogRef, {
           'startDate': cycle.startDate,
           'endDate': cycle.endDate,
-          'wastedAmount': wastedAmount,
+          'wastedAmount': formatPrecision(wastedAmount),
         });
       }
 
@@ -295,81 +330,13 @@ class IngredientRepository {
         'lastUpdated': Timestamp.fromDate(DateTime.now()),
       });
 
-      await ingredientBox.put(ingredientPLU, IngredientState.fromMap({
-        'tareWeight': newTareWeight,
-        'currentBarrel': newBarrelWeight,
-        'lastUpdated': DateTime.now(),
-      }));
+      await ingredientBox.put(
+          ingredientPLU,
+          IngredientState.fromMap({
+            'tareWeight': newTareWeight,
+            'currentBarrel': newBarrelWeight,
+            'lastUpdated': DateTime.now(),
+          }));
     });
   }
-
-  Future<void> refreshData(String ingredientPLU) async {
-    final DocumentReference ingredientRef = FirebaseFirestore.instance.collection('ingredients').doc(ingredientPLU);
-    final snapshot = await ingredientRef.get();
-
-    final box = await Hive.openBox<IngredientState>('ingredientBox');
-    await box.put(ingredientPLU, snapshot.data()! as IngredientState);
-  }
 }
-
-final ingredientRepositoryProvider =
-    Provider<IngredientRepository>((ref) => IngredientRepository(FirebaseFirestore.instance));
-
-final ingredientBoxProvider = FutureProvider.autoDispose<Box<IngredientState>>((ref) async => Hive.openBox<IngredientState>('ingredientBox'));
-
-final ingredientProvider = StreamProvider.autoDispose.family<IngredientState, String>((ref, ingredientPLU) async* {
-  final box = await ref.watch(ingredientBoxProvider.future);
-
-  if (box.containsKey(ingredientPLU)) {
-    final cachedData = box.get(ingredientPLU);
-    if (cachedData != null) {
-      // Return the cached data as it's already an IngredientState
-      yield cachedData;
-    }
-  }
-
-  final DocumentReference ingredientRef = FirebaseFirestore.instance.collection('ingredients').doc(ingredientPLU);
-
-  // Listen to the document's changes
-  yield* ingredientRef.snapshots().asyncMap((snapshot) async {
-    final data = snapshot.data();
-    if (data is! Map<String, dynamic>) {
-      throw Exception('Invalid data type from Firestore.');
-    }
-    data['lastUpdated'] = (data['lastUpdated'] as Timestamp).toDate();
-    final ingredientState = IngredientState.fromMap(data);
-    await box.put(ingredientPLU, ingredientState); // Store IngredientState in the box
-    return ingredientState;
-  });
-});
-
-final ingredientsByProductNameProvider = Provider.family<List<Ingredient>, String>((ref, productName) {
-  final productListAsyncValue = ref.watch(consolidatedProductListProvider);
-
-  // If the productListAsyncValue is still loading or has an error, return an empty list
-  if (productListAsyncValue is! AsyncData<List<ProductDisplayData>>) {
-    return [];
-  }
-
-  final productList = productListAsyncValue.value ?? [];
-
-  // Search for the product matching the productName
-  for (final productDisplayData in productList) {
-    if (productDisplayData.productDetails.productName == productName) {
-      return productDisplayData.productDetails.productFormula.entries.map((entry) {
-        final plu = entry.key;
-        final ingredientData = entry.value;
-        return Ingredient(
-          plu: plu,
-          name: ingredientData.ingredientName,
-          percentage: ingredientData.percentage,
-          amountToProduce: productDisplayData.product.amountToProduce,
-          productName: productDisplayData.productDetails.productName,
-        );
-      }).toList();
-    }
-  }
-
-  // Return an empty list if no matching product is found
-  return [];
-});

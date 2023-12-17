@@ -2,20 +2,28 @@ import 'package:compounders/models/ingredient_model.dart';
 import 'package:compounders/providers/compounding_provider.dart';
 import 'package:compounders/providers/ingredients_provider.dart';
 import 'package:compounders/providers/products_provider.dart';
-import 'package:compounders/repository/ingredients_repository.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tuple/tuple.dart';
 
+//TODO: please add IconButton to revert parameters to initial state when isPoured=true, if user click on red cancel button
+/// A stateful widget that provides an interactive button to handle pouring actions
+/// related to a specific ingredient. It allows for recording the used amount of an
+/// ingredient and provides feedback on the action's success.
 class PouringActionButton extends ConsumerStatefulWidget {
+  ///Expecting a two parameters coming from compounding.dart, where ingredientSnapshot is retrieved from the AsyncValue iteration.
   const PouringActionButton({
     required this.ingredientSnapshot,
     required this.controller,
     super.key,
   });
+
+  /// The state of the ingredient being poured, including its current stock and tare weight.
   final IngredientState ingredientSnapshot;
+
+  /// A controller for the text field that accepts the poured amount input from the user.
   final TextEditingController controller;
 
   @override
@@ -23,16 +31,24 @@ class PouringActionButton extends ConsumerStatefulWidget {
   @override
   void debugFillProperties(DiagnosticPropertiesBuilder properties) {
     super.debugFillProperties(properties);
-    properties..add(DiagnosticsProperty<IngredientState>('ingredientSnapshot', ingredientSnapshot))
-    ..add(DiagnosticsProperty<TextEditingController>('controller', controller));
+    properties
+      ..add(DiagnosticsProperty<IngredientState>('ingredientSnapshot', ingredientSnapshot))
+      ..add(DiagnosticsProperty<TextEditingController>('controller', controller));
   }
 }
 
+// ignore: public_member_api_docs
 class PouringActionButtonState extends ConsumerState<PouringActionButton> {
+  /// Tracks if the ingredient has been poured.
   late bool isPoured;
+
+  /// Indicates if the pouring action was successful.
   bool isSuccessful = false;
 
+  /// The total amount of ingredient used.
   double usedAmount = 0;
+
+  /// The amount of ingredient used over the required amount.
   double overUsedAmount = 0;
 
   @override
@@ -49,6 +65,7 @@ class PouringActionButtonState extends ConsumerState<PouringActionButton> {
         ),
         child: Column(
           children: [
+            // AnimatedSwitcher for a smooth transition between button states.
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 500),
               child: GestureDetector(
@@ -68,7 +85,7 @@ class PouringActionButtonState extends ConsumerState<PouringActionButton> {
 
   Future<void> _useWholeIngredient() async {
     ref.read(ingredientStockProvider.notifier).state = widget.ingredientSnapshot.stock;
-    await GoRouter.of(context).push('/use_whole_barrel');
+    await GoRouter.of(context).push('/use_all');
   }
 
   Icon _buildIcon() {
@@ -114,7 +131,9 @@ class PouringActionButtonState extends ConsumerState<PouringActionButton> {
                   ? Colors.lightGreenAccent
                   : widget.controller.text.isNotEmpty
                       ? Colors.white
-                      : isPoured ? Colors.yellowAccent : Colors.grey,
+                      : isPoured
+                          ? Colors.yellowAccent
+                          : Colors.grey,
               fontSize: 11,
             ),
           ),
@@ -235,12 +254,14 @@ class PouringActionButtonState extends ConsumerState<PouringActionButton> {
       debugPrint('error');
     }
   }
+
   @override
   void debugFillProperties(DiagnosticPropertiesBuilder properties) {
     super.debugFillProperties(properties);
-    properties..add(DiagnosticsProperty<bool>('isPoured', isPoured))
-    ..add(DiagnosticsProperty<bool>('isSuccessful', isSuccessful))
-    ..add(DoubleProperty('usedAmount', usedAmount))
-    ..add(DoubleProperty('overUsedAmount', overUsedAmount));
+    properties
+      ..add(DiagnosticsProperty<bool>('isPoured', isPoured))
+      ..add(DiagnosticsProperty<bool>('isSuccessful', isSuccessful))
+      ..add(DoubleProperty('usedAmount', usedAmount))
+      ..add(DoubleProperty('overUsedAmount', overUsedAmount));
   }
 }

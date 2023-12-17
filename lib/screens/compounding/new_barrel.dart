@@ -1,19 +1,34 @@
 import 'package:compounders/models/ingredient_model.dart';
 import 'package:compounders/providers/compounding_provider.dart';
 import 'package:compounders/providers/ingredients_provider.dart';
-import 'package:compounders/repository/ingredients_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-class IssueNewBarrelWeights extends ConsumerStatefulWidget {
-  const IssueNewBarrelWeights({super.key});
+/// NewBarrel Widget
+///
+/// A widget that presents an interface for the user to submit new weights for a new opened barrel.
+/// It handles the logic of submitting this data to a repository
+/// and navigating to a different screen based on the user's actions.
+class NewBarrel extends ConsumerStatefulWidget {
+  // ignore: public_member_api_docs
+  const NewBarrel({super.key});
 
   @override
   IssueNewBarrelWeightsState createState() => IssueNewBarrelWeightsState();
 }
 
-class IssueNewBarrelWeightsState extends ConsumerState<IssueNewBarrelWeights> {
+// ignore: public_member_api_docs
+class IssueNewBarrelWeightsState extends ConsumerState<NewBarrel> {
+  /// Submits new tare and contained amount weights for an ingredient.
+  ///
+  /// Performs validation on the weights, updates the ingredient data, logs the activity,
+  /// and navigates to the pouring screen upon successful submission.
+  ///
+  /// Parameters:
+  ///   - `newTareWeight`: The new tare weight to be registered.
+  ///   - `newBarrelWeight`: The new barrel weight to be registered.
+  ///   - `ingredientData`: The current state of the ingredient.
   Future<void> _submitData(double newTareWeight, double newBarrelWeight, IngredientState ingredientData) async {
     final ingredient = ref.watch(selectedIngredientProvider)!;
     final requiredAmount = ingredient.percentage * ingredient.amountToProduce;
@@ -80,7 +95,7 @@ class IssueNewBarrelWeightsState extends ConsumerState<IssueNewBarrelWeights> {
     await ref.read(ingredientRepositoryProvider).productLogIngredients(log);
 
     ref.watch(isPouredProvider.notifier).state = false;
-
+    // Navigate to pouring screen if the widget is still mounted after asynchronous operations.
     if (mounted) {
       GoRouter.of(context).go('/pouring');
     }

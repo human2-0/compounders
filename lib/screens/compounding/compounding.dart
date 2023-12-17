@@ -1,13 +1,10 @@
 import 'package:compounders/providers/compounding_provider.dart';
 import 'package:compounders/providers/ingredients_provider.dart';
 import 'package:compounders/providers/products_provider.dart';
-import 'package:compounders/repository/ingredients_repository.dart';
 import 'package:compounders/screens/compounding/pouring_button.dart';
-import 'package:compounders/screens/compounding/pouring_progress_bar.dart';
 import 'package:compounders/screens/compounding/scale_button.dart';
 import 'package:compounders/screens/compounding/top_up_button.dart';
 import 'package:compounders/utils.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -17,7 +14,7 @@ import 'package:tuple/tuple.dart';
 ///
 /// It presents an interface for the user to enter the amount poured and displays the remaining required amount.
 /// A progress bar visually represents how much of the ingredient has been poured relative to the required amount.
-/// The screen also provides buttons for additional actions like topping up the ingredient or adjusting the scale.
+/// The screen also provides buttons for additional actions like topping up the ingredient, using whole ingredient container or selecting the scale.
 ///
 /// Parameters:
 ///   - `key`: A [Key] used to control how one widget replaces another widget in the tree.
@@ -34,27 +31,20 @@ class CompoundingScreen extends ConsumerStatefulWidget {
 ///
 /// Manages the text controller for input, tracks if pouring is successful, and holds the user-entered value.
 /// Also manages the lifecycle of the text controller.
-class CompoundingScreenState extends ConsumerState<CompoundingScreen> {
-  late TextEditingController _controller;
+class CompoundingScreenState extends ConsumerState<CompoundingScreen> with SingleTickerProviderStateMixin {
+  late TextEditingController _textController;
 
-  double userValue = 0;
-  late bool isPoured;
-  bool isSuccessful = false;
-
-  double usedAmount = 0;
-
-  double overUsedAmount = 0;
 
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController();
+    _textController = TextEditingController();
   }
 
   @override
   void dispose() {
     super.dispose();
-    _controller.dispose();
+    _textController.dispose();
   }
 
   @override
@@ -140,20 +130,19 @@ class CompoundingScreenState extends ConsumerState<CompoundingScreen> {
               ),
               const SizedBox(height: 2),
 
-              ///This is a temporary widget for pouring calculations, in real use case it will be depreciated with
-              ///listening to websocket from IoT scale, so the value will not be parsed from keyboard controller as its now
+              ///This is a temporary widget for getting poured value, in real use case it will be depreciated with
+              ///listening to websocket from IoT scale, so the value will not be parsed from keyboard controller as it's now
               SizedBox(
                 width: MediaQuery.sizeOf(context).width * 0.70,
                 height: MediaQuery.sizeOf(context).height * 0.15, // for 50% of screen width
                 child: TextField(
-                  controller: _controller,
+                  controller: _textController,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   onSubmitted: (value) {
                     setState(() {
                       try {
-                        userValue = double.parse(value);
                         // Update the WeightsInputState
-                        ref.read(userValueProvider.notifier).state = userValue;
+                        ref.read(userValueProvider.notifier).state = double.parse(value);
                       } on FormatException {
                         debugPrint('error');
                       }
@@ -171,14 +160,13 @@ class CompoundingScreenState extends ConsumerState<CompoundingScreen> {
                   ),
                 ),
               ),
-              PouringProgressBar(requiredAmount: requiredAmount, value: userValue),
               const SizedBox(
                 height: 4,
               ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  PouringActionButton(controller: _controller, ingredientSnapshot: ingredientSnapshot),
+                  PouringActionButton(controller: _textController, ingredientSnapshot: ingredientSnapshot),
                   const TopUpButton(),
                   const ScaleButton(),
                 ],
@@ -190,16 +178,5 @@ class CompoundingScreenState extends ConsumerState<CompoundingScreen> {
       loading: () => const CircularProgressIndicator(),
       error: (error, stackTrace) => Text('Error loading ingredient: $error', style: const TextStyle(fontSize: 6)),
     );
-  }
-
-  @override
-  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
-    super.debugFillProperties(properties);
-    properties
-      ..add(DoubleProperty('userValue', userValue))
-      ..add(DiagnosticsProperty<bool>('isSuccessful', isSuccessful))
-      ..add(DiagnosticsProperty<bool>('isPoured', isPoured))
-      ..add(DoubleProperty('usedAmount', usedAmount))
-      ..add(DoubleProperty('overUsedAmount', overUsedAmount));
   }
 }

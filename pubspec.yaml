@@ -55,6 +55,10 @@ dependencies:
   tuple: ^2.0.2
   table_calendar: ^3.0.9
   austerity: ^1.1.0
+  mockito: ^5.4.3
+  riverpod_test: ^0.1.4
+  firebase_core_platform_interface: ^5.0.0
+  fake_cloud_firestore: ^2.4.4
 
 dev_dependencies:
   flutter_test:

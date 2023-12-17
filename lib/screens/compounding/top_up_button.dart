@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+///This widget pushes user to the confirmation screen, before proceeding to issue a new values for the ingredient.
 class TopUpButton extends ConsumerWidget{
+
+  // ignore: public_member_api_docs
   const TopUpButton({super.key});
   @override
   Widget build(BuildContext context, WidgetRef ref) =>

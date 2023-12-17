@@ -1,7 +1,9 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:compounders/models/ingredient_model.dart';
 import 'package:compounders/models/product_model.dart';
 import 'package:compounders/models/used_amount_model.dart';
 import 'package:compounders/providers/products_provider.dart';
+import 'package:compounders/repository/ingredients_repository.dart';
 import 'package:compounders/utils.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive/hive.dart';
@@ -124,3 +126,35 @@ final ingredientsByProductNameProvider = Provider.family<List<Ingredient>, Strin
 });
 
 final refreshTriggerProvider = StateProvider<bool>((ref) => false);
+
+
+final ingredientRepositoryProvider =
+Provider<IngredientRepository>((ref) => IngredientRepository(FirebaseFirestore.instance));
+
+final ingredientBoxProvider = StateProvider<Box<IngredientState>>((ref) => Hive.box<IngredientState>('ingredientBox'));
+
+final ingredientProvider = StreamProvider.autoDispose.family<IngredientState, String>((ref, ingredientPLU) async* {
+  final box = ref.watch(ingredientBoxProvider);
+
+  if (box.containsKey(ingredientPLU)) {
+    final cachedData = box.get(ingredientPLU);
+    if (cachedData != null) {
+      // Return the cached data as it's already an IngredientState
+      yield cachedData;
+    }
+  }
+
+  final DocumentReference ingredientRef = FirebaseFirestore.instance.collection('ingredients').doc(ingredientPLU);
+
+  // Listen to the document's changes
+  yield* ingredientRef.snapshots().asyncMap((snapshot) async {
+    final data = snapshot.data();
+    if (data is! Map<String, dynamic>) {
+      throw Exception('Invalid data type from Firestore.');
+    }
+    data['lastUpdated'] = (data['lastUpdated'] as Timestamp).toDate();
+    final ingredientState = IngredientState.fromMap(data);
+    await box.put(ingredientPLU, ingredientState); // Store IngredientState in the box
+    return ingredientState;
+  });
+});
